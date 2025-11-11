@@ -93,19 +93,16 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         case_sensitive = True
         
-    @classmethod
-    def validate_api_keys(cls):
+    def validate_api_keys(self):
         """Validate that at least one API key is set"""
-        has_gemini = bool(cls.GEMINI_API_KEY and cls.GEMINI_API_KEY != "your_gemini_api_key_here")
-        has_hf = bool(cls.HF_API_KEY and cls.HF_API_KEY != "your_huggingface_api_key_here")
-        has_replicate = bool(cls.REPLICATE_API_TOKEN and cls.REPLICATE_API_TOKEN != "your_replicate_api_token_here")
+        has_gemini = bool(self.GEMINI_API_KEY and self.GEMINI_API_KEY != "your_gemini_api_key_here")
+        has_hf = bool(self.HF_API_KEY and self.HF_API_KEY != "your_huggingface_api_key_here")
+        has_replicate = bool(self.REPLICATE_API_TOKEN and self.REPLICATE_API_TOKEN != "your_replicate_api_token_here")
         
         if not (has_gemini or has_hf or has_replicate):
             import warnings
             warnings.warn(
-                "⚠️  لا توجد API keys محددة. النظام سيستخدم Fallback generator فقط.\n"
                 "⚠️  No API keys set. System will use Fallback generator only.\n"
-                "💡 أضف على الأقل GEMINI_API_KEY للحصول على أفضل النتائج.\n"
                 "💡 Add at least GEMINI_API_KEY for best results.",
                 UserWarning
             )
