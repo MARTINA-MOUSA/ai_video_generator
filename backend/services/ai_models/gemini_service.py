@@ -5,8 +5,10 @@ from loguru import logger
 import os
 import uuid
 from typing import Optional, List
-from moviepy.editor import ImageClip, concatenate_videoclips
+from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip, CompositeVideoClip
 from core.config import settings
+from services.image_generator import ImageGenerator
+from services.tts_service import TTSService
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -49,6 +51,10 @@ class GeminiVideoService:
             except:
                 self.model = genai.GenerativeModel("gemini-1.5-flash")
                 self.model_name = "gemini-1.5-flash"
+        
+        # Initialize image generator and TTS
+        self.image_generator = ImageGenerator()
+        self.tts_service = TTSService()
     
     def generate(self, prompt: str, duration: int = 10) -> str:
         """
@@ -73,20 +79,29 @@ class GeminiVideoService:
             video_script = self._create_video_script(prompt, duration)
             logger.info(f"Created video script with {len(video_script)} scenes")
             
-            # Step 2: Generate frames for each scene
-            frames = []
-            frames_per_scene = max(1, duration // len(video_script) * 2)  # ~2 fps per scene
+            # Step 2: Generate images and narration for each scene
+            scenes_data = []
+            scene_duration = duration / len(video_script)
             
             for idx, scene in enumerate(video_script):
-                logger.info(f"Generating frames for scene {idx + 1}/{len(video_script)}")
-                scene_frames = self._generate_scene_frames(
-                    scene_description=scene,
-                    num_frames=frames_per_scene
-                )
-                frames.extend(scene_frames)
+                logger.info(f"Processing scene {idx + 1}/{len(video_script)}: {scene[:50]}...")
+                
+                # Generate image for scene
+                width, height = map(int, settings.VIDEO_RESOLUTION.split("x"))
+                image_path = self.image_generator.generate_image(scene, width, height)
+                
+                # Generate narration
+                audio_path = self.tts_service.generate_speech(scene, language="en")
+                
+                scenes_data.append({
+                    "image_path": image_path,
+                    "audio_path": audio_path,
+                    "description": scene,
+                    "duration": scene_duration
+                })
             
-            # Step 3: Combine frames into video
-            video_path = self._frames_to_video(frames, duration)
+            # Step 3: Combine images and audio into video
+            video_path = self._create_video_with_audio(scenes_data, duration)
             
             logger.info(f"Video generated successfully: {video_path}")
             return video_path
@@ -139,67 +154,88 @@ Birds flying in the sky
             # Fallback: use original prompt as single scene
             return [prompt]
     
-    def _generate_scene_frames(self, scene_description: str, num_frames: int) -> List:
+    def _create_video_with_audio(self, scenes_data: List[dict], total_duration: int) -> str:
         """
-        Generate image frames for a scene using Gemini's image generation
-        Note: Gemini 2.0+ can generate images, but we'll use a workaround
+        Create video from scenes with images and audio
         """
-        frames = []
+        from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
         
-        if not PIL_AVAILABLE:
-            logger.error("PIL (Pillow) not available, cannot generate frames")
-            raise ImportError("Pillow package required. Install with: pip install Pillow")
+        clips = []
+        temp_dir = os.path.join(settings.TEMP_DIR, f"gemini_{uuid.uuid4().hex[:8]}")
+        os.makedirs(temp_dir, exist_ok=True)
         
         try:
-            width, height = map(int, settings.VIDEO_RESOLUTION.split("x"))
+            for scene in scenes_data:
+                image_path = scene["image_path"]
+                audio_path = scene.get("audio_path")
+                duration = scene["duration"]
+                
+                if not image_path or not os.path.exists(image_path):
+                    logger.warning(f"Image not found: {image_path}, skipping scene")
+                    continue
+                
+                # Create video clip from image
+                video_clip = ImageClip(image_path, duration=duration)
+                
+                # Add audio if available
+                if audio_path and os.path.exists(audio_path):
+                    try:
+                        audio_clip = AudioFileClip(audio_path)
+                        # Adjust duration to match audio or image
+                        actual_duration = max(duration, audio_clip.duration)
+                        video_clip = video_clip.set_duration(actual_duration)
+                        video_clip = video_clip.set_audio(audio_clip)
+                    except Exception as e:
+                        logger.warning(f"Error adding audio: {e}")
+                
+                clips.append(video_clip)
             
-            for i in range(num_frames):
-                # Create a frame with gradient background
-                img = Image.new('RGB', (width, height), color=(20 + i*2, 30 + i*3, 40 + i*2))
-                draw = ImageDraw.Draw(img)
-                
-                # Add text (scene description)
-                try:
-                    # Try to use a font
-                    font_size = 40
-                    font = ImageFont.truetype("arial.ttf", font_size)
-                except:
-                    font = ImageFont.load_default()
-                
-                # Wrap text
-                words = scene_description.split()
-                lines = []
-                current_line = ""
-                for word in words:
-                    test_line = current_line + " " + word if current_line else word
-                    bbox = draw.textbbox((0, 0), test_line, font=font)
-                    if bbox[2] - bbox[0] < width - 100:
-                        current_line = test_line
-                    else:
-                        if current_line:
-                            lines.append(current_line)
-                        current_line = word
-                if current_line:
-                    lines.append(current_line)
-                
-                # Draw text
-                y_offset = (height - len(lines) * 50) // 2
-                for line in lines:
-                    bbox = draw.textbbox((0, 0), line, font=font)
-                    text_width = bbox[2] - bbox[0]
-                    x = (width - text_width) // 2
-                    draw.text((x, y_offset), line, fill='white', font=font)
-                    y_offset += 50
-                
-                frames.append(img)
+            if not clips:
+                raise ValueError("No valid scenes to create video")
+            
+            # Concatenate all clips
+            final_video = concatenate_videoclips(clips, method="compose")
+            
+            # Output path
+            filename = f"video_gemini_{uuid.uuid4().hex[:16]}.mp4"
+            output_path = os.path.join(settings.OUTPUT_DIR, filename)
+            
+            # Write video
+            final_video.write_videofile(
+                output_path,
+                fps=settings.VIDEO_FPS,
+                codec='libx264',
+                audio_codec='aac',
+                verbose=False,
+                logger=None
+            )
+            
+            # Cleanup
+            final_video.close()
+            for clip in clips:
+                clip.close()
+            
+            return output_path
             
         except Exception as e:
-            logger.error(f"Error generating frames: {e}")
-            # Fallback: create simple colored frame
-            img = Image.new('RGB', (width, height), color=(50, 50, 80))
-            frames = [img] * num_frames
-        
-        return frames
+            logger.error(f"Error creating video: {e}", exc_info=True)
+            raise
+        finally:
+            # Cleanup temp files
+            try:
+                for scene in scenes_data:
+                    if scene.get("image_path") and os.path.exists(scene["image_path"]):
+                        try:
+                            os.remove(scene["image_path"])
+                        except:
+                            pass
+                    if scene.get("audio_path") and os.path.exists(scene["audio_path"]):
+                        try:
+                            os.remove(scene["audio_path"])
+                        except:
+                            pass
+            except:
+                pass
     
     def _frames_to_video(self, frames: List, duration: int) -> str:
         """
