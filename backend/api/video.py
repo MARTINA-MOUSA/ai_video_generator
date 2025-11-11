@@ -39,7 +39,6 @@ async def generate_video(
     db: Session = Depends(get_db)
 ):
     """
-    إنشاء فيديو من برومبت نصي
     
     Generates a video from a text prompt. Returns a job ID for tracking progress.
     """
@@ -79,7 +78,6 @@ async def download_video(
     video_id: str,
     db: Session = Depends(get_db)
 ):
-    """تحميل فيديو"""
     video_file = db.query(VideoFile).filter(VideoFile.id == video_id).first()
     
     if not video_file:
@@ -101,7 +99,6 @@ async def list_videos(
     limit: int = 20,
     db: Session = Depends(get_db)
 ):
-    """قائمة بالفيديوهات المولدة"""
     jobs = db.query(VideoJob).filter(
         VideoJob.status == JobStatus.COMPLETED
     ).order_by(VideoJob.created_at.desc()).offset(skip).limit(limit).all()

@@ -15,7 +15,6 @@ async def get_job_status(
     job_id: str,
     db: Session = Depends(get_db)
 ):
-    """الحصول على حالة المهمة"""
     job = db.query(VideoJob).filter(VideoJob.id == job_id).first()
     
     if not job:
@@ -41,7 +40,6 @@ async def list_jobs(
     limit: int = 20,
     db: Session = Depends(get_db)
 ):
-    """قائمة بجميع المهام"""
     query = db.query(VideoJob)
     
     if status:

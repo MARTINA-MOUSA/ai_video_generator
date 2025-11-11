@@ -36,12 +36,12 @@ class PromptEnhancer:
         if self.use_gemini:
             try:
                 enhancement_prompt = f"""
-                قم بتحسين هذا البرومبت لتوليد فيديو أفضل. 
-                أضف تفاصيل بصرية وحركة واضحة.
-                احتفظ بالمعنى الأصلي.
-                البرومبت: {prompt}
+                Enhance this prompt for better video generation.
+                Add visual details and clear movement.
+                Keep the original meaning.
+                Prompt: {prompt}
                 
-                أعد البرومبت المحسن فقط بدون شرح.
+                Return only the enhanced prompt without explanation.
                 """
                 response = self.model.generate_content(enhancement_prompt)
                 enhanced = response.text.strip()

@@ -5,6 +5,8 @@ from loguru import logger
 import os
 import uuid
 from typing import Optional, List
+from moviepy.editor import ImageClip, concatenate_videoclips
+from core.config import settings
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -99,20 +101,20 @@ class GeminiVideoService:
         """
         try:
             script_prompt = f"""
-أنشئ سيناريو فيديو تفصيلي من البرومبت التالي.
-قسّم الفيديو إلى مشاهد متعددة (scenes) بحيث يكون كل مشهد وصفاً بسيطاً وواضحاً.
-الفيديو سيكون مدته {duration} ثانية.
+Create a detailed video script from the following prompt.
+Break down the video into multiple scenes, where each scene is a simple and clear description.
+The video will be {duration} seconds long.
 
-البرومبت: {prompt}
+Prompt: {prompt}
 
-أعد قائمة بالمشاهد، كل مشهد في سطر منفصل.
-كل مشهد يجب أن يكون وصفاً بسيطاً وواضحاً للصورة المرئية.
-لا تضع أرقام أو رموز، فقط الوصف.
+Return a list of scenes, each scene on a separate line.
+Each scene should be a simple and clear description of the visual image.
+Do not include numbers or symbols, only the description.
 
-مثال:
-غروب الشمس على شاطئ البحر
-أمواج هادئة تلامس الرمال
-طيور تحلق في السماء
+Example:
+Sunset over the beach
+Gentle waves touching the sand
+Birds flying in the sky
 """
             
             response = self.model.generate_content(script_prompt)
@@ -203,8 +205,6 @@ class GeminiVideoService:
         """
         Convert image frames to video using MoviePy
         """
-        from moviepy.editor import ImageClip, concatenate_videoclips
-        from core.config import settings
         
         if not frames:
             raise ValueError("No frames to convert to video")
