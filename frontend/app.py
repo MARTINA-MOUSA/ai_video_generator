@@ -274,24 +274,45 @@ def display_job_status(status: dict):
         
         if video_path and os.path.exists(video_path):
             try:
-                # Read video file
+                # Read video file in chunks to avoid memory issues
+                video_bytes = b""
                 with open(video_path, 'rb') as f:
-                    video_bytes = f.read()
+                    while True:
+                        chunk = f.read(8192)
+                        if not chunk:
+                            break
+                        video_bytes += chunk
                 
-                # Display video - use st.video with bytes
-                st.video(video_bytes)
-                
-                # Download button
-                st.download_button(
-                    label="⬇️ Download Video",
-                    data=video_bytes,
-                    file_name=status.get('video_filename', 'video.mp4'),
-                    mime='video/mp4',
-                    use_container_width=True
-                )
+                # Check if video is not too large (Streamlit has limits)
+                if len(video_bytes) > 200 * 1024 * 1024:  # 200MB limit
+                    st.warning("Video is too large to display inline. Please download it.")
+                    st.download_button(
+                        label="⬇️ Download Video",
+                        data=video_bytes,
+                        file_name=status.get('video_filename', 'video.mp4'),
+                        mime='video/mp4',
+                        use_container_width=True
+                    )
+                else:
+                    # Display video - use st.video with bytes
+                    try:
+                        st.video(video_bytes)
+                    except Exception as video_error:
+                        # If st.video fails, try alternative method
+                        st.warning(f"Could not display video inline: {str(video_error)}")
+                        st.info("Please download the video to view it.")
+                    
+                    # Download button
+                    st.download_button(
+                        label="⬇️ Download Video",
+                        data=video_bytes,
+                        file_name=status.get('video_filename', 'video.mp4'),
+                        mime='video/mp4',
+                        use_container_width=True
+                    )
             except Exception as e:
                 # Fallback: show download link only
-                st.warning(f"Could not display video: {str(e)}")
+                st.warning(f"Could not load video: {str(e)}")
                 st.info(f"Download the video from: {video_url}")
                 
                 # Try direct download link
@@ -306,6 +327,20 @@ def display_job_status(status: dict):
                     margin-top: 10px;
                 ">⬇️ Download Video</a>
                 """, unsafe_allow_html=True)
+        else:
+            # Video not cached, show download link
+            st.info("Video is ready. Click below to download:")
+            st.markdown(f"""
+            <a href="{video_url}" download="{status.get('video_filename', 'video.mp4')}" style="
+                display: inline-block;
+                padding: 10px 20px;
+                background-color: #1f77b4;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                margin-top: 10px;
+            ">⬇️ Download Video</a>
+            """, unsafe_allow_html=True)
     
     # Error message
     if status_value == 'failed':

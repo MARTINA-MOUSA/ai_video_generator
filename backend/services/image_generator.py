@@ -41,6 +41,7 @@ class ImageGenerator:
     def generate_image(self, prompt: str, width: int = 1280, height: int = 720) -> Optional[str]:
         """
         Generate image from text prompt
+        Tries multiple methods in order of preference
         
         Args:
             prompt: Text description
@@ -51,22 +52,99 @@ class ImageGenerator:
             Path to generated image file or None
         """
         try:
-            # Try using Stable Diffusion API (free alternative)
-            image_path = self._generate_with_stable_diffusion(prompt, width, height)
-            if image_path:
-                return image_path
+            # Method 1: Try Stable Diffusion XL (better quality)
+            if settings.HF_API_KEY and settings.HF_API_KEY != "your_huggingface_api_key_here":
+                image_path = self._generate_with_stable_diffusion_xl(prompt, width, height)
+                if image_path and os.path.exists(image_path):
+                    logger.info(f"Successfully generated image with Stable Diffusion XL: {image_path}")
+                    return image_path
+                
+                # Method 2: Try Stable Diffusion v1.5 (fallback)
+                image_path = self._generate_with_stable_diffusion(prompt, width, height)
+                if image_path and os.path.exists(image_path):
+                    logger.info(f"Successfully generated image with Stable Diffusion: {image_path}")
+                    return image_path
+                else:
+                    logger.warning("Stable Diffusion failed, trying other methods")
             
-            # Fallback: Use Gemini to create image description and generate placeholder
-            logger.warning("Using placeholder image generation")
+            # Method 3: Try Replicate API if available
+            if settings.REPLICATE_API_TOKEN and settings.REPLICATE_API_TOKEN != "your_replicate_api_token_here":
+                image_path = self._generate_with_replicate(prompt, width, height)
+                if image_path and os.path.exists(image_path):
+                    logger.info(f"Successfully generated image with Replicate: {image_path}")
+                    return image_path
+            
+            # Method 4: Try Gemini image generation (if available)
+            if self.gemini_available:
+                image_path = self._generate_with_gemini(prompt, width, height)
+                if image_path and os.path.exists(image_path):
+                    logger.info(f"Successfully generated image with Gemini: {image_path}")
+                    return image_path
+            
+            # Fallback: Generate enhanced placeholder image
+            logger.info("Using enhanced placeholder image")
             return self._generate_placeholder_image(prompt, width, height)
             
         except Exception as e:
             logger.error(f"Error generating image: {e}")
             return self._generate_placeholder_image(prompt, width, height)
     
+    def _generate_with_stable_diffusion_xl(self, prompt: str, width: int, height: int) -> Optional[str]:
+        """
+        Generate image using Stable Diffusion XL (better quality)
+        Using HuggingFace Inference API
+        """
+        try:
+            if not settings.HF_API_KEY:
+                return None
+            
+            # Use SDXL for better quality
+            api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+            headers = {"Authorization": f"Bearer {settings.HF_API_KEY}"}
+            
+            # Enhance prompt for better image generation
+            enhanced_prompt = self._enhance_prompt_for_image(prompt)
+            
+            payload = {
+                "inputs": enhanced_prompt,
+                "parameters": {
+                    "width": min(width, 1024),
+                    "height": min(height, 1024),
+                    "num_inference_steps": 30,  # Higher quality
+                    "guidance_scale": 7.5
+                }
+            }
+            
+            response = requests.post(api_url, headers=headers, json=payload, timeout=120)
+            
+            if response.status_code == 200:
+                image = Image.open(BytesIO(response.content))
+                
+                # Resize if needed
+                if image.size != (width, height):
+                    image = image.resize((width, height), Image.Resampling.LANCZOS)
+                
+                # Save image
+                filename = f"image_{uuid.uuid4().hex[:16]}.png"
+                image_path = os.path.join(settings.TEMP_DIR, filename)
+                image.save(image_path)
+                
+                logger.info(f"Image generated with Stable Diffusion XL: {image_path}")
+                return image_path
+            elif response.status_code == 503:
+                logger.info("SDXL model is loading, trying fallback")
+                return None
+            else:
+                logger.warning(f"Stable Diffusion XL API error: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error with Stable Diffusion XL: {e}")
+            return None
+    
     def _generate_with_stable_diffusion(self, prompt: str, width: int, height: int) -> Optional[str]:
         """
-        Generate image using Stable Diffusion API (free)
+        Generate image using Stable Diffusion v1.5 (fallback)
         Using HuggingFace Inference API
         """
         try:
@@ -114,6 +192,72 @@ class ImageGenerator:
                 
         except Exception as e:
             logger.error(f"Error with Stable Diffusion: {e}")
+            return None
+    
+    def _generate_with_replicate(self, prompt: str, width: int, height: int) -> Optional[str]:
+        """
+        Generate image using Replicate API (high quality)
+        """
+        try:
+            import replicate
+            
+            # Enhance prompt
+            enhanced_prompt = self._enhance_prompt_for_image(prompt)
+            
+            # Use FLUX model for best quality
+            output = replicate.run(
+                "black-forest-labs/flux-schnell",
+                input={
+                    "prompt": enhanced_prompt,
+                    "width": min(width, 1024),
+                    "height": min(height, 1024),
+                }
+            )
+            
+            if output and isinstance(output, (list, str)):
+                image_url = output[0] if isinstance(output, list) else output
+                
+                # Download image
+                response = requests.get(image_url, timeout=60)
+                if response.status_code == 200:
+                    image = Image.open(BytesIO(response.content))
+                    
+                    # Resize if needed
+                    if image.size != (width, height):
+                        image = image.resize((width, height), Image.Resampling.LANCZOS)
+                    
+                    # Save image
+                    filename = f"image_{uuid.uuid4().hex[:16]}.png"
+                    image_path = os.path.join(settings.TEMP_DIR, filename)
+                    image.save(image_path)
+                    
+                    logger.info(f"Image generated with Replicate: {image_path}")
+                    return image_path
+            
+            return None
+            
+        except ImportError:
+            logger.warning("Replicate package not installed. Install with: pip install replicate")
+            return None
+        except Exception as e:
+            logger.error(f"Error with Replicate: {e}")
+            return None
+    
+    def _generate_with_gemini(self, prompt: str, width: int, height: int) -> Optional[str]:
+        """
+        Generate image using Gemini (if image generation is available)
+        """
+        try:
+            if not self.gemini_available or not self.model:
+                return None
+            
+            # Note: Gemini 2.0+ may support image generation in future
+            # For now, this is a placeholder
+            logger.info("Gemini image generation not yet fully supported")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error with Gemini image generation: {e}")
             return None
     
     def _generate_placeholder_image(self, prompt: str, width: int, height: int) -> str:
@@ -176,17 +320,23 @@ class ImageGenerator:
     def _enhance_prompt_for_image(self, prompt: str) -> str:
         """Enhance prompt for better image generation"""
         # Add quality keywords if not present
-        quality_keywords = ["high quality", "detailed", "beautiful", "cinematic", "professional"]
+        quality_keywords = [
+            "high quality", "detailed", "beautiful", "cinematic", 
+            "professional", "photorealistic", "4k", "ultra detailed",
+            "sharp focus", "well lit", "vibrant colors"
+        ]
         enhanced = prompt
         
         # Check if prompt is in Arabic - translate keywords to English
         is_arabic = any('\u0600' <= char <= '\u06FF' for char in prompt)
         
         if not is_arabic:
-            # English prompt - add quality keywords
-            for keyword in quality_keywords:
-                if keyword not in enhanced.lower():
+            # English prompt - add quality keywords (limit to 3-4 to avoid prompt bloat)
+            added = 0
+            for keyword in quality_keywords[:4]:
+                if keyword not in enhanced.lower() and added < 3:
                     enhanced = f"{enhanced}, {keyword}"
+                    added += 1
         
         return enhanced
     

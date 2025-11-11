@@ -44,18 +44,21 @@ class TTSService:
             Path to generated audio file
         """
         if not text or not text.strip():
+            logger.warning("Empty text provided for TTS")
             return None
         
         try:
             if self.use_gtts:
+                logger.info(f"Generating speech with gTTS (language: {language})")
                 return self._generate_with_gtts(text, language)
             elif self.use_pyttsx3:
+                logger.info("Generating speech with pyttsx3")
                 return self._generate_with_pyttsx3(text)
             else:
-                logger.error("No TTS library available")
+                logger.error("No TTS library available. Install gTTS: pip install gtts")
                 return None
         except Exception as e:
-            logger.error(f"Error generating speech: {e}")
+            logger.error(f"Error generating speech: {e}", exc_info=True)
             return None
     
     def _generate_with_gtts(self, text: str, language: str) -> str:

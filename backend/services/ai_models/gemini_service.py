@@ -90,8 +90,23 @@ class GeminiVideoService:
                 width, height = map(int, settings.VIDEO_RESOLUTION.split("x"))
                 image_path = self.image_generator.generate_image(scene, width, height)
                 
+                if not image_path:
+                    logger.error(f"Failed to generate image for scene {idx + 1}")
+                    continue
+                
+                if not os.path.exists(image_path):
+                    logger.error(f"Image file not found: {image_path}")
+                    continue
+                
+                logger.info(f"Image generated: {image_path}")
+                
                 # Generate narration
                 audio_path = self.tts_service.generate_speech(scene, language="en")
+                
+                if audio_path and os.path.exists(audio_path):
+                    logger.info(f"Audio generated: {audio_path}")
+                else:
+                    logger.warning(f"Audio generation failed for scene {idx + 1}, continuing without audio")
                 
                 scenes_data.append({
                     "image_path": image_path,
@@ -157,15 +172,19 @@ Birds flying in the sky
     def _create_video_with_audio(self, scenes_data: List[dict], total_duration: int) -> str:
         """
         Create video from scenes with images and audio
+        Add animations and transitions for dynamic video
         """
-        from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
+        from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip
+        import numpy as np
         
         clips = []
         temp_dir = os.path.join(settings.TEMP_DIR, f"gemini_{uuid.uuid4().hex[:8]}")
         os.makedirs(temp_dir, exist_ok=True)
         
         try:
-            for scene in scenes_data:
+            width, height = map(int, settings.VIDEO_RESOLUTION.split("x"))
+            
+            for idx, scene in enumerate(scenes_data):
                 image_path = scene["image_path"]
                 audio_path = scene.get("audio_path")
                 duration = scene["duration"]
@@ -174,27 +193,31 @@ Birds flying in the sky
                     logger.warning(f"Image not found: {image_path}, skipping scene")
                     continue
                 
-                # Create video clip from image
-                video_clip = ImageClip(image_path, duration=duration)
+                # Create animated video clip from image with movement
+                video_clip = self._create_animated_clip(image_path, duration, width, height, idx)
                 
                 # Add audio if available
                 if audio_path and os.path.exists(audio_path):
                     try:
                         audio_clip = AudioFileClip(audio_path)
-                        # Adjust duration to match audio or image
+                        # Adjust duration to match audio
                         actual_duration = max(duration, audio_clip.duration)
                         video_clip = video_clip.set_duration(actual_duration)
                         video_clip = video_clip.set_audio(audio_clip)
+                        logger.info(f"Audio added to scene {idx + 1}, duration: {actual_duration:.2f}s")
                     except Exception as e:
-                        logger.warning(f"Error adding audio: {e}")
+                        logger.warning(f"Error adding audio to scene {idx + 1}: {e}")
+                        # Continue without audio
+                else:
+                    logger.warning(f"No audio available for scene {idx + 1}")
                 
                 clips.append(video_clip)
             
             if not clips:
                 raise ValueError("No valid scenes to create video")
             
-            # Concatenate all clips
-            final_video = concatenate_videoclips(clips, method="compose")
+            # Concatenate with transitions
+            final_video = self._concatenate_with_transitions(clips, total_duration)
             
             # Output path
             filename = f"video_gemini_{uuid.uuid4().hex[:16]}.mp4"
@@ -236,6 +259,79 @@ Birds flying in the sky
                             pass
             except:
                 pass
+    
+    def _create_animated_clip(self, image_path: str, duration: float, width: int, height: int, scene_index: int):
+        """
+        Create animated clip from static image with zoom/pan effects
+        """
+        from moviepy.editor import ImageClip
+        
+        # Load base image
+        base_clip = ImageClip(image_path, duration=duration).resize((width, height))
+        
+        # Create animation effect based on scene index
+        # Alternate between zoom in, zoom out, and subtle movement
+        animation_type = scene_index % 3
+        
+        try:
+            if animation_type == 0:
+                # Zoom in effect - gradually increase size
+                def zoom_func(t):
+                    return 1.0 + (t / duration) * 0.1  # Zoom from 1.0 to 1.1
+                
+                animated_clip = base_clip.resize(zoom_func)
+                
+            elif animation_type == 1:
+                # Zoom out effect - gradually decrease size  
+                def zoom_func(t):
+                    return 1.1 - (t / duration) * 0.1  # Zoom from 1.1 to 1.0
+                
+                animated_clip = base_clip.resize(zoom_func)
+                
+            else:
+                # Subtle zoom in then out (ken burns effect)
+                def zoom_func(t):
+                    if t < duration / 2:
+                        # Zoom in first half
+                        return 1.0 + (t / (duration / 2)) * 0.1
+                    else:
+                        # Zoom out second half
+                        return 1.1 - ((t - duration / 2) / (duration / 2)) * 0.1
+                
+                animated_clip = base_clip.resize(zoom_func)
+            
+            # Ensure clip fits screen
+            animated_clip = animated_clip.resize((width, height))
+            
+        except Exception as e:
+            logger.warning(f"Animation effect failed, using static image: {e}")
+            animated_clip = base_clip
+        
+        return animated_clip
+    
+    def _concatenate_with_transitions(self, clips: List, total_duration: float):
+        """
+        Concatenate clips with fade transitions
+        """
+        from moviepy.editor import concatenate_videoclips
+        
+        # Add fade in/out to clips for smooth transitions
+        transition_duration = 0.3  # 0.3 seconds for smoother transitions
+        
+        faded_clips = []
+        for i, clip in enumerate(clips):
+            # Fade in at start (except first clip)
+            if i > 0:
+                clip = clip.fadein(transition_duration)
+            # Fade out at end (except last clip)
+            if i < len(clips) - 1:
+                clip = clip.fadeout(transition_duration)
+            faded_clips.append(clip)
+        
+        # Concatenate clips
+        final_video = concatenate_videoclips(faded_clips, method="compose")
+        
+        return final_video
     
     def _frames_to_video(self, frames: List, duration: int) -> str:
         """
