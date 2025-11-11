@@ -233,8 +233,8 @@ def display_job_status(status: dict):
         st.subheader("🎥 Generated Video")
         video_url = f"{API_BASE_URL}{status.get('video_url')}"
         
-        # Use session state to cache video
-        video_cache_key = f"video_{status.get('video_file_id', 'unknown')}"
+        # Use session state to cache video path
+        video_cache_key = f"video_path_{status.get('video_file_id', 'unknown')}"
         
         if video_cache_key not in st.session_state:
             try:
@@ -243,14 +243,22 @@ def display_job_status(status: dict):
                     response = requests.get(video_url, stream=True, timeout=60)
                     response.raise_for_status()
                     
-                    # Read video bytes
-                    video_bytes = b""
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            video_bytes += chunk
-                    
-                    # Cache in session state
-                    st.session_state[video_cache_key] = video_bytes
+                    # Save to temporary file
+                    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+                    try:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                tmp_file.write(chunk)
+                        tmp_file_path = tmp_file.name
+                        tmp_file.close()
+                        
+                        # Cache path in session state
+                        st.session_state[video_cache_key] = tmp_file_path
+                    except:
+                        tmp_file.close()
+                        if os.path.exists(tmp_file.name):
+                            os.unlink(tmp_file.name)
+                        raise
                     
             except requests.exceptions.RequestException as e:
                 st.error(f"Error downloading video: {str(e)}")
@@ -261,12 +269,16 @@ def display_job_status(status: dict):
                 st.info(f"Download link: {video_url}")
                 return
         
-        # Get video from cache
-        video_bytes = st.session_state.get(video_cache_key)
+        # Get video path from cache
+        video_path = st.session_state.get(video_cache_key)
         
-        if video_bytes:
+        if video_path and os.path.exists(video_path):
             try:
-                # Display video
+                # Read video file
+                with open(video_path, 'rb') as f:
+                    video_bytes = f.read()
+                
+                # Display video - use st.video with bytes
                 st.video(video_bytes)
                 
                 # Download button
@@ -278,8 +290,22 @@ def display_job_status(status: dict):
                     use_container_width=True
                 )
             except Exception as e:
-                st.error(f"Error displaying video: {str(e)}")
-                st.info(f"Download link: {video_url}")
+                # Fallback: show download link only
+                st.warning(f"Could not display video: {str(e)}")
+                st.info(f"Download the video from: {video_url}")
+                
+                # Try direct download link
+                st.markdown(f"""
+                <a href="{video_url}" download="{status.get('video_filename', 'video.mp4')}" style="
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background-color: #1f77b4;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin-top: 10px;
+                ">⬇️ Download Video</a>
+                """, unsafe_allow_html=True)
     
     # Error message
     if status_value == 'failed':
