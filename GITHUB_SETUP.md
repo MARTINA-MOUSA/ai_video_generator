@@ -1,85 +1,85 @@
-# GitHub Setup | إعداد GitHub
+# GitHub Setup
 
-## ربط المشروع بـ GitHub
+## Connect Project to GitHub
 
-### 1. إنشاء Repository جديد على GitHub
+### 1. Create New Repository on GitHub
 
-1. اذهب إلى [GitHub](https://github.com)
-2. اضغط على **"New repository"** أو **"+"** → **"New repository"**
-3. اختر اسم للمشروع (مثال: `ai-video-generator`)
-4. اختر **Private** (لحماية API keys)
-5. **لا** تضع علامة على "Initialize with README"
-6. اضغط **"Create repository"**
+1. Go to [GitHub](https://github.com)
+2. Click **"New repository"** or **"+"** → **"New repository"**
+3. Choose a name for the project (e.g., `ai-video-generator`)
+4. Choose **Private** (to protect API keys)
+5. **Do not** check "Initialize with README"
+6. Click **"Create repository"**
 
-### 2. تهيئة Git في المشروع
+### 2. Initialize Git in Project
 
 ```bash
-# من المجلد الرئيسي للمشروع
+# From project root directory
 cd ai_video_generator
 
-# تهيئة Git
+# Initialize Git
 git init
 
-# إضافة جميع الملفات
+# Add all files
 git add .
 
-# Commit أولي
+# Initial commit
 git commit -m "Initial commit: AI Video Generator"
 ```
 
-### 3. ربط المشروع بـ GitHub
+### 3. Connect Project to GitHub
 
 ```bash
-# استبدل YOUR_USERNAME و YOUR_REPO_NAME بالقيم الخاصة بك
+# Replace YOUR_USERNAME and YOUR_REPO_NAME with your values
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 
-# رفع المشروع
+# Push project
 git branch -M main
 git push -u origin main
 ```
 
-### 4. التأكد من حماية API Keys
+### 4. Verify API Keys Protection
 
-⚠️ **مهم جداً:** تأكد من أن ملف `.env` موجود في `.gitignore`
+⚠️ **Very Important:** Make sure `.env` file is in `.gitignore`
 
 ```bash
-# تحقق من أن .env في .gitignore
+# Check that .env is in .gitignore
 cat .gitignore | grep .env
 ```
 
-يجب أن ترى:
+You should see:
 ```
 .env
 ```
 
-إذا لم يكن موجوداً، أضفه:
+If not present, add it:
 ```bash
 echo ".env" >> .gitignore
 ```
 
-## الملفات المهمة للـ GitHub
+## Important Files for GitHub
 
-### ✅ ملفات يجب رفعها:
-- ✅ جميع ملفات الكود (`.py`)
+### ✅ Files to Upload:
+- ✅ All code files (`.py`)
 - ✅ `requirements.txt`
 - ✅ `README.md`
-- ✅ `env_template.txt` (بدون API keys الحقيقية)
-- ✅ جميع ملفات التوثيق (`.md`)
+- ✅ `env_template.txt` (without real API keys)
+- ✅ All documentation files (`.md`)
 
-### ❌ ملفات لا يجب رفعها:
-- ❌ `.env` (يحتوي على API keys)
+### ❌ Files NOT to Upload:
+- ❌ `.env` (contains API keys)
 - ❌ `__pycache__/`
 - ❌ `*.pyc`
-- ❌ `venv/` أو `env/`
-- ❌ `outputs/` (الفيديوهات المولدة)
-- ❌ `*.db` (قاعدة البيانات)
+- ❌ `venv/` or `env/`
+- ❌ `outputs/` (generated videos)
+- ❌ `*.db` (database files)
 
-## إعدادات إضافية
+## Additional Settings
 
-### إضافة .gitattributes (اختياري)
+### Add .gitattributes (Optional)
 
 ```bash
-# إنشاء ملف .gitattributes
+# Create .gitattributes file
 cat > .gitattributes << EOF
 *.py text eol=lf
 *.md text eol=lf
@@ -88,10 +88,10 @@ cat > .gitattributes << EOF
 EOF
 ```
 
-### إضافة LICENSE (اختياري)
+### Add LICENSE (Optional)
 
 ```bash
-# مثال: MIT License
+# Example: MIT License
 cat > LICENSE << EOF
 MIT License
 
@@ -101,55 +101,55 @@ Permission is hereby granted...
 EOF
 ```
 
-## التحقق من الأمان
+## Security Check
 
-قبل الرفع، تأكد من:
+Before pushing, make sure:
 
 ```bash
-# 1. تحقق من أن .env غير موجود في Git
+# 1. Check that .env is not in Git
 git status | grep .env
-# يجب ألا يظهر أي شيء
+# Should show nothing
 
-# 2. تحقق من محتوى .gitignore
+# 2. Check .gitignore content
 cat .gitignore
 
-# 3. تحقق من الملفات المضافة
+# 3. Check added files
 git status
 ```
 
-## مثال على الأوامر الكاملة
+## Complete Command Example
 
 ```bash
-# 1. تهيئة Git
+# 1. Initialize Git
 git init
 
-# 2. إضافة جميع الملفات
+# 2. Add all files
 git add .
 
 # 3. Commit
 git commit -m "Initial commit: AI Video Generator with Gemini support"
 
-# 4. ربط بـ GitHub (استبدل بالقيم الخاصة بك)
+# 4. Connect to GitHub (replace with your values)
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 
-# 5. رفع المشروع
+# 5. Push project
 git branch -M main
 git push -u origin main
 ```
 
-## بعد الرفع
+## After Pushing
 
-### 1. إضافة وصف للمشروع
-- اذهب إلى صفحة Repository على GitHub
-- اضغط **"Settings"** → **"General"**
-- أضف وصف للمشروع
+### 1. Add Project Description
+- Go to Repository page on GitHub
+- Click **"Settings"** → **"General"**
+- Add project description
 
-### 2. إضافة Topics
-- في صفحة Repository، اضغط **"Add topics"**
-- أضف: `ai`, `video-generation`, `gemini`, `python`, `fastapi`, `streamlit`
+### 2. Add Topics
+- On Repository page, click **"Add topics"**
+- Add: `ai`, `video-generation`, `gemini`, `python`, `fastapi`, `streamlit`
 
-### 3. إضافة Badges (اختياري)
-يمكنك إضافة badges في `README.md`:
+### 3. Add Badges (Optional)
+You can add badges in `README.md`:
 
 ```markdown
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
@@ -157,44 +157,44 @@ git push -u origin main
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ```
 
-## استكشاف الأخطاء
+## Troubleshooting
 
-### خطأ: "remote origin already exists"
+### Error: "remote origin already exists"
 ```bash
-# احذف الـ remote القديم
+# Remove old remote
 git remote remove origin
 
-# أضف الـ remote الجديد
+# Add new remote
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 ```
 
-### خطأ: "failed to push"
+### Error: "failed to push"
 ```bash
-# تأكد من أنك سجلت الدخول
-# استخدم Personal Access Token بدلاً من كلمة المرور
+# Make sure you're logged in
+# Use Personal Access Token instead of password
 ```
 
-### خطأ: "API keys exposed"
-إذا رفعت `.env` بالخطأ:
-1. احذف الـ repository من GitHub
-2. أنشئ repository جديد
-3. تأكد من أن `.env` في `.gitignore`
-4. رفع المشروع مرة أخرى
+### Error: "API keys exposed"
+If you pushed `.env` by mistake:
+1. Delete the repository from GitHub
+2. Create new repository
+3. Make sure `.env` is in `.gitignore`
+4. Push project again
 
-## ملاحظات أمنية
+## Security Notes
 
-⚠️ **مهم جداً:**
+⚠️ **Very Important:**
 
-1. **لا ترفع `.env` أبداً** - يحتوي على API keys
-2. استخدم `env_template.txt` كقالب فقط
-3. إذا رفعت API keys بالخطأ:
-   - احذف الـ repository فوراً
-   - أنشئ API keys جديدة
-   - لا تستخدم نفس الـ keys القديمة
+1. **Never push `.env`** - contains API keys
+2. Use `env_template.txt` as template only
+3. If you pushed API keys by mistake:
+   - Delete repository immediately
+   - Create new API keys
+   - Don't use old keys
 
-## GitHub Actions (اختياري)
+## GitHub Actions (Optional)
 
-يمكنك إضافة CI/CD باستخدام GitHub Actions:
+You can add CI/CD using GitHub Actions:
 
 ```yaml
 # .github/workflows/test.yml
@@ -212,9 +212,8 @@ jobs:
       - run: python backend/test_env.py
 ```
 
-## المساعدة
+## Help
 
 - [GitHub Docs](https://docs.github.com)
 - [Git Basics](https://git-scm.com/book)
 - [GitHub Security](https://docs.github.com/en/code-security)
-

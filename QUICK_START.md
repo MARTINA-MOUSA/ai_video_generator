@@ -1,14 +1,14 @@
-# Quick Start Guide | دليل البدء السريع
+# Quick Start Guide
 
-## المتطلبات الأساسية
+## Prerequisites
 
 - Python 3.9+
-- FFmpeg (لتشغيل الفيديوهات)
-- GPU (اختياري لكن موصى به للـ AI models)
+- FFmpeg (for video playback)
+- GPU (optional but recommended for AI models)
 
-## التثبيت
+## Installation
 
-### 1. إنشاء Virtual Environment
+### 1. Create Virtual Environment
 
 ```bash
 # Windows
@@ -20,36 +20,35 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 2. تثبيت المتطلبات
+### 2. Install Requirements
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. إعداد Environment Variables
+### 3. Setup Environment Variables
 
 ```bash
-# انسخ ملف القالب
+# Copy template file
 cp env_template.txt .env
 
-# افتح ملف .env وأضف API keys الخاصة بك
-# على الأقل أضف GEMINI_API_KEY
+# Open .env file and add your API keys
+# At minimum, add GEMINI_API_KEY
 ```
 
-**مثال على ملف `.env`:**
+**Example `.env` file:**
 ```env
 GEMINI_API_KEY=your_actual_api_key_here
 GEMINI_MODEL=gemini-2.0-flash-exp
 ```
 
-
-### 4. إنشاء المجلدات المطلوبة
+### 4. Create Required Directories
 
 ```bash
 mkdir outputs temp
 ```
 
-## التشغيل
+## Running
 
 ### Backend
 
@@ -58,7 +57,7 @@ cd backend
 uvicorn main:app --reload
 ```
 
-الـ API سيعمل على: `http://localhost:8000`
+API will run on: `http://localhost:8000`
 
 ### Frontend
 
@@ -67,36 +66,35 @@ cd frontend
 streamlit run app.py
 ```
 
-الواجهة ستكون على: `http://localhost:8501`
+Interface will be on: `http://localhost:8501`
 
-## الاستخدام
+## Usage
 
-1. افتح المتصفح على `http://localhost:8501`
-2. أدخل برومبت نصي (مثال: "فيديو عن غروب الشمس")
-3. اختر مدة الفيديو (حتى 120 ثانية)
-4. اضغط "إنشاء الفيديو"
-5. انتظر حتى يكتمل التوليد
-6. شاهد أو حمّل الفيديو
+1. Open browser at `http://localhost:8501`
+2. Enter a text prompt (e.g., "video of sunset on the beach")
+3. Select video duration (up to 120 seconds)
+4. Click "Generate Video"
+5. Wait for generation to complete
+6. Watch or download the video
 
-## ملاحظات
+## Notes
 
-- بدون API keys، النظام سيستخدم Fallback generator (فيديو بسيط مع نص)
-- للحصول على أفضل النتائج، أضف على الأقل GEMINI_API_KEY
-- FFmpeg مطلوب لتشغيل الفيديوهات
+- Without API keys, the system will use Fallback generator (simple video with text)
+- For best results, add at least GEMINI_API_KEY
+- FFmpeg is required for video playback
 
-## استكشاف الأخطاء
+## Troubleshooting
 
-### خطأ في الاتصال بالـ API
-- تأكد من تشغيل Backend على `http://localhost:8000`
-- تحقق من CORS settings في `backend/core/config.py`
+### API Connection Error
+- Make sure Backend is running on `http://localhost:8000`
+- Check CORS settings in `backend/core/config.py`
 
-### خطأ في توليد الفيديو
-- تأكد من تثبيت FFmpeg
-- تحقق من وجود مساحة كافية في `outputs/`
-- راجع الـ logs في console
+### Video Generation Error
+- Make sure FFmpeg is installed
+- Check available space in `outputs/` directory
+- Review logs in console
 
-### خطأ في الـ AI Models
-- تأكد من صحة API keys
-- HuggingFace models تحتاج GPU في معظم الحالات
-- Replicate يعمل بدون GPU (سحابي)
-
+### AI Models Error
+- Verify API keys are correct
+- HuggingFace models need GPU in most cases
+- Replicate works without GPU (cloud-based)

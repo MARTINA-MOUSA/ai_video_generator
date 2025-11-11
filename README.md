@@ -1,18 +1,18 @@
-# AI Video Generator | مولد الفيديو بالذكاء الاصطناعي
+# AI Video Generator
 
-أداة متقدمة لتوليد الفيديوهات من النصوص باستخدام الذكاء الاصطناعي
+Advanced tool for generating videos from text prompts using AI
 
-## المميزات
+## Features
 
-- 🎬 توليد فيديوهات من برومبت نصي (حتى دقيقتين)
-- 🤖 دعم عدة نماذج AI (Stable Video Diffusion, AnimateDiff, وغيرها)
-- ⚡ معالجة غير متزامنة مع Job Queue
-- 🌐 واجهة ويب حديثة (Streamlit)
-- 📊 تتبع الحالة والتقدم في الوقت الفعلي
-- 💾 تخزين وإدارة الفيديوهات المولدة
-- 🔄 دعم عدة لغات (العربية والإنجليزية)
+- 🎬 Generate videos from text prompts (up to 2 minutes)
+- 🤖 Support for multiple AI models (Gemini, HuggingFace, Replicate)
+- ⚡ Asynchronous processing with Job Queue
+- 🌐 Modern web interface (Streamlit)
+- 📊 Real-time status and progress tracking
+- 💾 Storage and management of generated videos
+- 🔄 Multi-language support (Arabic & English)
 
-## البنية المعمارية
+## Architecture
 
 ```
 ai_video_generator/
@@ -27,73 +27,76 @@ ai_video_generator/
 └── docs/                   # Documentation
 ```
 
-## التقنيات المستخدمة
+## Technologies
 
 - **Backend**: FastAPI, SQLAlchemy, Celery (Job Queue)
-- **AI Models**: Stable Video Diffusion, AnimateDiff, HuggingFace
+- **AI Models**: Gemini, HuggingFace, Replicate
 - **Video Processing**: MoviePy, FFmpeg
 - **Frontend**: Streamlit
 - **Database**: SQLite (Development) / PostgreSQL (Production)
 
-## التثبيت
+## Installation
 
 ```bash
-# إنشاء virtual environment
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# تثبيت المتطلبات
+# Install requirements
 pip install -r requirements.txt
 
-# إعداد Environment Variables
-# انسخ ملف القالب وأنشئ ملف .env
+# Setup Environment Variables
+# Copy template file and create .env
 cp env_template.txt .env
 
-# افتح ملف .env وأضف API keys الخاصة بك
-# على الأقل أضف GEMINI_API_KEY
+# Open .env file and add your API keys
+# At minimum, add GEMINI_API_KEY
 ```
 
-## إعداد API Keys
+## API Keys Setup
 
-1. **انسخ ملف القالب:**
+1. **Copy template file:**
    ```bash
    cp env_template.txt .env
    ```
 
-2. **افتح ملف `.env` وأضف API keys:**
-   - **Gemini API** (موصى به): احصل على API key من [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - **HuggingFace API** (اختياري): احصل على token من [HuggingFace](https://huggingface.co/settings/tokens)
-   - **Replicate API** (اختياري): احصل على token من [Replicate](https://replicate.com/account/api-tokens)
+2. **Open `.env` file and add API keys:**
+   - **Gemini API** (Recommended): Get API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - **HuggingFace API** (Optional): Get token from [HuggingFace](https://huggingface.co/settings/tokens)
+   - **Replicate API** (Optional): Get token from [Replicate](https://replicate.com/account/api-tokens)
 
-3. **مثال على ملف `.env`:**
+3. **Example `.env` file:**
    ```env
    GEMINI_API_KEY=AIzaSy...your_key_here
    GEMINI_MODEL=gemini-2.0-flash-exp
    ```
 
-📖 **للمزيد من التفاصيل:** راجع [QUICK_START.md](QUICK_START.md)
+📖 **For more details:** See [QUICK_START.md](QUICK_START.md)
 
-## الاستخدام
+## Usage
 
 ```bash
-# تشغيل Backend
+# Run Backend
 cd backend
 uvicorn main:app --reload
 
-# تشغيل Frontend
+# Run Frontend (in another terminal)
 cd frontend
 streamlit run app.py
 ```
 
-## المتطلبات
+## Requirements
 
 - Python 3.9+
 - FFmpeg
-- GPU (اختياري لكن موصى به)
+- GPU (optional but recommended)
 
-## ربط المشروع بـ GitHub
+## Connect to GitHub
 
-لرفع المشروع إلى GitHub، راجع [GITHUB_SETUP.md](GITHUB_SETUP.md)
+To push the project to GitHub, see [GITHUB_SETUP.md](GITHUB_SETUP.md)
 
-⚠️ **مهم:** تأكد من أن ملف `.env` موجود في `.gitignore` قبل الرفع!
+⚠️ **Important:** Make sure `.env` file is in `.gitignore` before pushing!
 
+## License
+
+MIT License
