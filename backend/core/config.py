@@ -32,6 +32,20 @@ class Settings(BaseSettings):
         "sqlite:///./ai_video_generator.db"
     )
     
+    # PostgreSQL (for production)
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "ai_video_generator")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "")
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
+    POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", "5432"))
+    
+    @property
+    def postgresql_url(self) -> str:
+        """Get PostgreSQL connection URL"""
+        if self.DATABASE_URL.startswith("postgresql"):
+            return self.DATABASE_URL
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
     # Video Settings
     MAX_VIDEO_DURATION: int = 120  # seconds (2 minutes)
     DEFAULT_VIDEO_DURATION: int = 10  # seconds

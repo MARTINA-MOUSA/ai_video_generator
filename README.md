@@ -91,6 +91,19 @@ streamlit run app.py
 - FFmpeg
 - GPU (optional but recommended)
 
+## Production Deployment
+
+For production deployment, see [PRODUCTION.md](PRODUCTION.md)
+
+Quick start with Docker:
+```bash
+# Setup environment
+cp .env.production.example .env
+
+# Start all services
+docker-compose up -d
+```
+
 ## Connect to GitHub
 
 To push the project to GitHub, see [GITHUB_SETUP.md](GITHUB_SETUP.md)
