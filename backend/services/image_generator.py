@@ -73,29 +73,41 @@ class ImageGenerator:
             if not settings.HF_API_KEY:
                 return None
             
-            api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+            # Use a faster, more reliable model
+            api_url = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
             headers = {"Authorization": f"Bearer {settings.HF_API_KEY}"}
             
+            # Enhance prompt for better image generation
+            enhanced_prompt = self._enhance_prompt_for_image(prompt)
+            
             payload = {
-                "inputs": prompt,
+                "inputs": enhanced_prompt,
                 "parameters": {
-                    "width": width,
-                    "height": height
+                    "width": min(width, 1024),  # API limit
+                    "height": min(height, 1024)  # API limit
                 }
             }
             
-            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+            response = requests.post(api_url, headers=headers, json=payload, timeout=90)
             
             if response.status_code == 200:
                 image = Image.open(BytesIO(response.content))
+                
+                # Resize if needed
+                if image.size != (width, height):
+                    image = image.resize((width, height), Image.Resampling.LANCZOS)
                 
                 # Save image
                 filename = f"image_{uuid.uuid4().hex[:16]}.png"
                 image_path = os.path.join(settings.TEMP_DIR, filename)
                 image.save(image_path)
                 
-                logger.info(f"Image generated: {image_path}")
+                logger.info(f"Image generated with Stable Diffusion: {image_path}")
                 return image_path
+            elif response.status_code == 503:
+                # Model is loading, wait and retry
+                logger.info("Model is loading, using placeholder instead")
+                return None
             else:
                 logger.warning(f"Stable Diffusion API error: {response.status_code}")
                 return None
@@ -106,13 +118,15 @@ class ImageGenerator:
     
     def _generate_placeholder_image(self, prompt: str, width: int, height: int) -> str:
         """
-        Generate a beautiful placeholder image with gradient and text
+        Generate a beautiful placeholder image with gradient (no text)
+        Focus on visual appeal - text will be in audio narration
         """
         if not PIL_AVAILABLE:
             raise ImportError("Pillow required for image generation")
         
-        from PIL import ImageDraw, ImageFont
+        from PIL import ImageDraw
         import random
+        import math
         
         # Create gradient background
         img = Image.new('RGB', (width, height))
@@ -121,53 +135,36 @@ class ImageGenerator:
         # Generate gradient colors based on prompt
         colors = self._get_colors_from_prompt(prompt)
         
-        # Draw gradient
+        # Draw smooth gradient (vertical)
         for i in range(height):
             ratio = i / height
-            r = int(colors[0][0] * (1 - ratio) + colors[1][0] * ratio)
-            g = int(colors[0][1] * (1 - ratio) + colors[1][1] * ratio)
-            b = int(colors[0][2] * (1 - ratio) + colors[1][2] * ratio)
+            # Use smooth curve for better gradient
+            smooth_ratio = math.sin(ratio * math.pi / 2)
+            r = int(colors[0][0] * (1 - smooth_ratio) + colors[1][0] * smooth_ratio)
+            g = int(colors[0][1] * (1 - smooth_ratio) + colors[1][1] * smooth_ratio)
+            b = int(colors[0][2] * (1 - smooth_ratio) + colors[1][2] * smooth_ratio)
             draw.line([(0, i), (width, i)], fill=(r, g, b))
         
-        # Add text overlay
-        try:
-            font_size = min(60, width // 20)
-            try:
-                font = ImageFont.truetype("arial.ttf", font_size)
-            except:
-                font = ImageFont.load_default()
-            
-            # Wrap text
-            words = prompt.split()
-            lines = []
-            current_line = ""
-            for word in words:
-                test_line = current_line + " " + word if current_line else word
-                bbox = draw.textbbox((0, 0), test_line, font=font)
-                if bbox[2] - bbox[0] < width - 200:
-                    current_line = test_line
-                else:
-                    if current_line:
-                        lines.append(current_line)
-                    current_line = word
-            if current_line:
-                lines.append(current_line)
-            
-            # Draw text with shadow
-            y_offset = (height - len(lines) * (font_size + 10)) // 2
-            for line in lines:
-                bbox = draw.textbbox((0, 0), line, font=font)
-                text_width = bbox[2] - bbox[0]
-                x = (width - text_width) // 2
-                
-                # Shadow
-                draw.text((x + 2, y_offset + 2), line, fill=(0, 0, 0, 128), font=font)
-                # Main text
-                draw.text((x, y_offset), line, fill='white', font=font)
-                y_offset += font_size + 10
-                
-        except Exception as e:
-            logger.warning(f"Error adding text to image: {e}")
+        # Add subtle visual interest - simple center highlight
+        # This creates depth without being too slow
+        center_x, center_y = width // 2, height // 2
+        
+        # Draw a subtle ellipse highlight in center (faster than full radial)
+        highlight_size = min(width, height) // 4
+        for i in range(highlight_size):
+            alpha = 1 - (i / highlight_size)
+            brightness = int(15 * alpha)
+            ellipse_bbox = [
+                center_x - highlight_size + i,
+                center_y - highlight_size + i,
+                center_x + highlight_size - i,
+                center_y + highlight_size - i
+            ]
+            # Draw with decreasing brightness
+            overlay_color = (brightness, brightness, brightness)
+            # Use a simple rectangle approximation for speed
+            if i < highlight_size // 2:
+                draw.ellipse(ellipse_bbox, outline=overlay_color, width=2)
         
         # Save image
         filename = f"image_{uuid.uuid4().hex[:16]}.png"
@@ -176,22 +173,53 @@ class ImageGenerator:
         
         return image_path
     
+    def _enhance_prompt_for_image(self, prompt: str) -> str:
+        """Enhance prompt for better image generation"""
+        # Add quality keywords if not present
+        quality_keywords = ["high quality", "detailed", "beautiful", "cinematic", "professional"]
+        enhanced = prompt
+        
+        # Check if prompt is in Arabic - translate keywords to English
+        is_arabic = any('\u0600' <= char <= '\u06FF' for char in prompt)
+        
+        if not is_arabic:
+            # English prompt - add quality keywords
+            for keyword in quality_keywords:
+                if keyword not in enhanced.lower():
+                    enhanced = f"{enhanced}, {keyword}"
+        
+        return enhanced
+    
     def _get_colors_from_prompt(self, prompt: str) -> tuple:
         """Get gradient colors based on prompt keywords"""
         prompt_lower = prompt.lower()
         
+        # Check for Arabic keywords too
+        arabic_keywords = {
+            'شمس': 'sun', 'غروب': 'sunset', 'بحر': 'ocean', 'ماء': 'water',
+            'ليل': 'night', 'ظلام': 'dark', 'طبيعة': 'nature', 'غابة': 'forest',
+            'مدينة': 'city', 'صباح': 'morning'
+        }
+        
+        # Translate Arabic keywords
+        for arabic, english in arabic_keywords.items():
+            if arabic in prompt:
+                prompt_lower += f" {english}"
+        
         # Color themes based on keywords
-        if any(word in prompt_lower for word in ['sunset', 'sun', 'warm', 'fire', 'orange']):
-            return ((255, 100, 50), (50, 20, 100))  # Orange to purple
-        elif any(word in prompt_lower for word in ['ocean', 'sea', 'water', 'blue']):
-            return ((50, 100, 200), (20, 50, 100))  # Blue gradient
-        elif any(word in prompt_lower for word in ['forest', 'nature', 'green', 'tree']):
-            return ((50, 150, 50), (20, 80, 20))  # Green gradient
-        elif any(word in prompt_lower for word in ['night', 'dark', 'moon', 'star']):
-            return ((20, 20, 50), (5, 5, 15))  # Dark blue to black
-        elif any(word in prompt_lower for word in ['sunrise', 'morning', 'dawn']):
-            return ((255, 200, 100), (255, 150, 50))  # Yellow to orange
+        if any(word in prompt_lower for word in ['sunset', 'sun', 'warm', 'fire', 'orange', 'غروب']):
+            return ((255, 120, 60), (180, 60, 120))  # Vibrant orange to pink
+        elif any(word in prompt_lower for word in ['ocean', 'sea', 'water', 'blue', 'بحر', 'ماء']):
+            return ((60, 140, 220), (20, 80, 160))  # Bright blue gradient
+        elif any(word in prompt_lower for word in ['forest', 'nature', 'green', 'tree', 'طبيعة', 'غابة']):
+            return ((80, 180, 100), (40, 120, 60))  # Rich green gradient
+        elif any(word in prompt_lower for word in ['night', 'dark', 'moon', 'star', 'ليل', 'ظلام']):
+            return ((30, 30, 80), (10, 10, 30))  # Deep blue to dark
+        elif any(word in prompt_lower for word in ['sunrise', 'morning', 'dawn', 'صباح']):
+            return ((255, 220, 120), (255, 160, 80))  # Golden yellow to orange
+        elif any(word in prompt_lower for word in ['city', 'urban', 'building', 'مدينة']):
+            return ((100, 100, 120), (60, 60, 80))  # Urban gray gradient
         else:
-            # Default gradient
-            return ((100, 50, 150), (50, 100, 200))  # Purple to blue
+            # Default beautiful gradient - purple to blue
+            return ((120, 80, 180), (60, 120, 220))  # Rich purple to bright blue
 

@@ -4,6 +4,8 @@ Streamlit Frontend for AI Video Generator
 import streamlit as st
 import requests
 import time
+import os
+import tempfile
 from datetime import datetime
 
 # Page config
@@ -228,12 +230,56 @@ def display_job_status(status: dict):
     
     # Video display
     if status_value == 'completed' and status.get('video_url'):
-        st.subheader("🎥 الفيديو المولد")
+        st.subheader("🎥 Generated Video")
         video_url = f"{API_BASE_URL}{status.get('video_url')}"
-        st.video(video_url)
         
-        if st.button("⬇️ تحميل الفيديو", use_container_width=True):
-            st.info(f"رابط التحميل: {video_url}")
+        # Use session state to cache video
+        video_cache_key = f"video_{status.get('video_file_id', 'unknown')}"
+        
+        if video_cache_key not in st.session_state:
+            try:
+                # Download video from API
+                with st.spinner("Loading video..."):
+                    response = requests.get(video_url, stream=True, timeout=60)
+                    response.raise_for_status()
+                    
+                    # Read video bytes
+                    video_bytes = b""
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            video_bytes += chunk
+                    
+                    # Cache in session state
+                    st.session_state[video_cache_key] = video_bytes
+                    
+            except requests.exceptions.RequestException as e:
+                st.error(f"Error downloading video: {str(e)}")
+                st.info(f"Try downloading directly: {video_url}")
+                return
+            except Exception as e:
+                st.error(f"Error loading video: {str(e)}")
+                st.info(f"Download link: {video_url}")
+                return
+        
+        # Get video from cache
+        video_bytes = st.session_state.get(video_cache_key)
+        
+        if video_bytes:
+            try:
+                # Display video
+                st.video(video_bytes)
+                
+                # Download button
+                st.download_button(
+                    label="⬇️ Download Video",
+                    data=video_bytes,
+                    file_name=status.get('video_filename', 'video.mp4'),
+                    mime='video/mp4',
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"Error displaying video: {str(e)}")
+                st.info(f"Download link: {video_url}")
     
     # Error message
     if status_value == 'failed':
