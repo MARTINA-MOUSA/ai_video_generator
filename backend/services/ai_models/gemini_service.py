@@ -5,6 +5,16 @@ from loguru import logger
 import os
 import uuid
 from typing import Optional, List
+
+# Fix for PIL.Image.ANTIALIAS deprecation in Pillow 10+
+try:
+    from PIL import Image
+    # Add ANTIALIAS alias for compatibility with older MoviePy
+    if not hasattr(Image, 'ANTIALIAS'):
+        Image.ANTIALIAS = Image.LANCZOS
+except ImportError:
+    pass
+
 from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip, CompositeVideoClip
 from core.config import settings
 from services.image_generator import ImageGenerator
@@ -86,9 +96,9 @@ class GeminiVideoService:
             for idx, scene in enumerate(video_script):
                 logger.info(f"Processing scene {idx + 1}/{len(video_script)}: {scene[:50]}...")
                 
-                # Generate image for scene
+                # Generate image for scene (with unique scene index for variety)
                 width, height = map(int, settings.VIDEO_RESOLUTION.split("x"))
-                image_path = self.image_generator.generate_image(scene, width, height)
+                image_path = self.image_generator.generate_image(scene, width, height, scene_index=idx)
                 
                 if not image_path:
                     logger.error(f"Failed to generate image for scene {idx + 1}")

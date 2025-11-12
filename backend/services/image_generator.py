@@ -38,58 +38,84 @@ class ImageGenerator:
                 self.model = None
                 logger.warning("Gemini image generation not available")
     
-    def generate_image(self, prompt: str, width: int = 1280, height: int = 720) -> Optional[str]:
+    def generate_image(self, prompt: str, width: int = 1280, height: int = 720, scene_index: int = 0) -> Optional[str]:
         """
         Generate image from text prompt
         Tries multiple methods in order of preference
+        Each scene gets a unique seed for variety
         
         Args:
             prompt: Text description
             width: Image width
             height: Image height
+            scene_index: Scene index for unique seed generation
         
         Returns:
             Path to generated image file or None
         """
+        import random
+        
         try:
+            logger.info(f"Generating image for scene {scene_index} with prompt: {prompt[:100]}...")
+            
             # Method 1: Try Stable Diffusion XL (better quality)
-            if settings.HF_API_KEY and settings.HF_API_KEY != "your_huggingface_api_key_here":
-                image_path = self._generate_with_stable_diffusion_xl(prompt, width, height)
+            hf_key = settings.HF_API_KEY
+            if hf_key and hf_key != "your_huggingface_api_key_here" and len(hf_key) > 10:
+                logger.info(f"✅ HF_API_KEY found (length: {len(hf_key)}), attempting Stable Diffusion XL...")
+                image_path = self._generate_with_stable_diffusion_xl(prompt, width, height, scene_index)
                 if image_path and os.path.exists(image_path):
-                    logger.info(f"Successfully generated image with Stable Diffusion XL: {image_path}")
+                    logger.info(f"✅ Successfully generated image with Stable Diffusion XL: {image_path}")
                     return image_path
                 
                 # Method 2: Try Stable Diffusion v1.5 (fallback)
-                image_path = self._generate_with_stable_diffusion(prompt, width, height)
+                logger.info("Attempting Stable Diffusion v1.5...")
+                image_path = self._generate_with_stable_diffusion(prompt, width, height, scene_index)
                 if image_path and os.path.exists(image_path):
-                    logger.info(f"Successfully generated image with Stable Diffusion: {image_path}")
+                    logger.info(f"✅ Successfully generated image with Stable Diffusion: {image_path}")
                     return image_path
                 else:
-                    logger.warning("Stable Diffusion failed, trying other methods")
+                    logger.warning("❌ Stable Diffusion failed, trying other methods")
+            else:
+                if not hf_key:
+                    logger.warning("⚠️ HF_API_KEY is empty. Add it to .env file")
+                elif hf_key == "your_huggingface_api_key_here":
+                    logger.warning("⚠️ HF_API_KEY is still placeholder. Replace with actual key in .env")
+                else:
+                    logger.warning(f"⚠️ HF_API_KEY seems invalid (too short: {len(hf_key)} chars)")
             
             # Method 3: Try Replicate API if available
-            if settings.REPLICATE_API_TOKEN and settings.REPLICATE_API_TOKEN != "your_replicate_api_token_here":
-                image_path = self._generate_with_replicate(prompt, width, height)
+            replicate_token = settings.REPLICATE_API_TOKEN
+            if replicate_token and replicate_token != "your_replicate_api_token_here" and len(replicate_token) > 10:
+                logger.info(f"✅ REPLICATE_API_TOKEN found (length: {len(replicate_token)}), attempting Replicate API...")
+                image_path = self._generate_with_replicate(prompt, width, height, scene_index)
                 if image_path and os.path.exists(image_path):
-                    logger.info(f"Successfully generated image with Replicate: {image_path}")
+                    logger.info(f"✅ Successfully generated image with Replicate: {image_path}")
                     return image_path
+            else:
+                if not replicate_token:
+                    logger.warning("⚠️ REPLICATE_API_TOKEN is empty. Add it to .env file")
+                elif replicate_token == "your_replicate_api_token_here":
+                    logger.warning("⚠️ REPLICATE_API_TOKEN is still placeholder. Replace with actual token in .env")
+                else:
+                    logger.warning(f"⚠️ REPLICATE_API_TOKEN seems invalid (too short: {len(replicate_token)} chars)")
             
             # Method 4: Try Gemini image generation (if available)
             if self.gemini_available:
-                image_path = self._generate_with_gemini(prompt, width, height)
+                logger.info("Attempting Gemini image generation...")
+                image_path = self._generate_with_gemini(prompt, width, height, scene_index)
                 if image_path and os.path.exists(image_path):
-                    logger.info(f"Successfully generated image with Gemini: {image_path}")
+                    logger.info(f"✅ Successfully generated image with Gemini: {image_path}")
                     return image_path
             
             # Fallback: Generate enhanced placeholder image
-            logger.info("Using enhanced placeholder image")
-            return self._generate_placeholder_image(prompt, width, height)
+            logger.warning("⚠️ All API methods failed, using enhanced placeholder image")
+            return self._generate_placeholder_image(prompt, width, height, scene_index)
             
         except Exception as e:
-            logger.error(f"Error generating image: {e}")
-            return self._generate_placeholder_image(prompt, width, height)
+            logger.error(f"❌ Error generating image: {e}", exc_info=True)
+            return self._generate_placeholder_image(prompt, width, height, scene_index)
     
-    def _generate_with_stable_diffusion_xl(self, prompt: str, width: int, height: int) -> Optional[str]:
+    def _generate_with_stable_diffusion_xl(self, prompt: str, width: int, height: int, scene_index: int = 0) -> Optional[str]:
         """
         Generate image using Stable Diffusion XL (better quality)
         Using HuggingFace Inference API
@@ -98,12 +124,16 @@ class ImageGenerator:
             if not settings.HF_API_KEY:
                 return None
             
-            # Use SDXL for better quality
-            api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+            # Try SDXL Turbo first (faster and more reliable)
+            api_url = "https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo"
             headers = {"Authorization": f"Bearer {settings.HF_API_KEY}"}
             
             # Enhance prompt for better image generation
             enhanced_prompt = self._enhance_prompt_for_image(prompt)
+            
+            # Add unique seed for each scene to ensure variety
+            import random
+            seed = random.randint(0, 2147483647) + scene_index * 1000
             
             payload = {
                 "inputs": enhanced_prompt,
@@ -111,9 +141,12 @@ class ImageGenerator:
                     "width": min(width, 1024),
                     "height": min(height, 1024),
                     "num_inference_steps": 30,  # Higher quality
-                    "guidance_scale": 7.5
+                    "guidance_scale": 7.5,
+                    "seed": seed  # Unique seed for each scene
                 }
             }
+            
+            logger.info(f"SDXL request - Prompt: {enhanced_prompt[:80]}..., Seed: {seed}")
             
             response = requests.post(api_url, headers=headers, json=payload, timeout=120)
             
@@ -134,15 +167,77 @@ class ImageGenerator:
             elif response.status_code == 503:
                 logger.info("SDXL model is loading, trying fallback")
                 return None
+            elif response.status_code == 410:
+                logger.warning("SDXL model is deprecated or removed. Trying alternative model...")
+                # Try alternative SDXL endpoint
+                return self._try_alternative_sd_models(prompt, width, height, scene_index)
             else:
-                logger.warning(f"Stable Diffusion XL API error: {response.status_code}")
+                error_msg = response.text[:200] if hasattr(response, 'text') else "Unknown error"
+                logger.warning(f"Stable Diffusion XL API error {response.status_code}: {error_msg}")
                 return None
                 
         except Exception as e:
             logger.error(f"Error with Stable Diffusion XL: {e}")
             return None
     
-    def _generate_with_stable_diffusion(self, prompt: str, width: int, height: int) -> Optional[str]:
+    def _try_alternative_sd_models(self, prompt: str, width: int, height: int, scene_index: int = 0) -> Optional[str]:
+        """
+        Try alternative Stable Diffusion models when main model fails
+        """
+        import random
+        seed = random.randint(0, 2147483647) + scene_index * 1000
+        enhanced_prompt = self._enhance_prompt_for_image(prompt)
+        
+        # Try different models (newer working models)
+        alternative_models = [
+            "stabilityai/sdxl-turbo",
+            "stabilityai/stable-diffusion-2-1-base",
+            "runwayml/stable-diffusion-v1-5",  # This one should work
+            "CompVis/stable-diffusion-v1-4",
+            "stabilityai/stable-diffusion-2-1"
+        ]
+        
+        for model_name in alternative_models:
+            try:
+                api_url = f"https://api-inference.huggingface.co/models/{model_name}"
+                headers = {"Authorization": f"Bearer {settings.HF_API_KEY}"}
+                
+                payload = {
+                    "inputs": enhanced_prompt,
+                    "parameters": {
+                        "width": min(width, 768),
+                        "height": min(height, 768),
+                        "seed": seed
+                    }
+                }
+                
+                logger.info(f"Trying alternative model: {model_name}")
+                response = requests.post(api_url, headers=headers, json=payload, timeout=90)
+                
+                if response.status_code == 200:
+                    image = Image.open(BytesIO(response.content))
+                    if image.size != (width, height):
+                        image = image.resize((width, height), Image.Resampling.LANCZOS)
+                    
+                    filename = f"image_{uuid.uuid4().hex[:16]}.png"
+                    image_path = os.path.join(settings.TEMP_DIR, filename)
+                    image.save(image_path)
+                    
+                    logger.info(f"✅ Image generated with {model_name}: {image_path}")
+                    return image_path
+                elif response.status_code == 503:
+                    logger.info(f"Model {model_name} is loading, trying next...")
+                    continue
+                else:
+                    logger.warning(f"Model {model_name} failed with status {response.status_code}")
+                    continue
+            except Exception as e:
+                logger.warning(f"Error with model {model_name}: {e}")
+                continue
+        
+        return None
+    
+    def _generate_with_stable_diffusion(self, prompt: str, width: int, height: int, scene_index: int = 0) -> Optional[str]:
         """
         Generate image using Stable Diffusion v1.5 (fallback)
         Using HuggingFace Inference API
@@ -158,13 +253,20 @@ class ImageGenerator:
             # Enhance prompt for better image generation
             enhanced_prompt = self._enhance_prompt_for_image(prompt)
             
+            # Add unique seed for each scene
+            import random
+            seed = random.randint(0, 2147483647) + scene_index * 1000
+            
             payload = {
                 "inputs": enhanced_prompt,
                 "parameters": {
                     "width": min(width, 1024),  # API limit
-                    "height": min(height, 1024)  # API limit
+                    "height": min(height, 1024),  # API limit
+                    "seed": seed  # Unique seed for variety
                 }
             }
+            
+            logger.info(f"SD v1.5 request - Prompt: {enhanced_prompt[:80]}..., Seed: {seed}")
             
             response = requests.post(api_url, headers=headers, json=payload, timeout=90)
             
@@ -184,17 +286,21 @@ class ImageGenerator:
                 return image_path
             elif response.status_code == 503:
                 # Model is loading, wait and retry
-                logger.info("Model is loading, using placeholder instead")
-                return None
+                logger.info("Model is loading, trying alternative...")
+                return self._try_alternative_sd_models(prompt, width, height, scene_index)
+            elif response.status_code == 410:
+                logger.warning("SD v1.5 model deprecated. Trying alternative models...")
+                return self._try_alternative_sd_models(prompt, width, height, scene_index)
             else:
-                logger.warning(f"Stable Diffusion API error: {response.status_code}")
+                error_msg = response.text[:200] if hasattr(response, 'text') else "Unknown error"
+                logger.warning(f"Stable Diffusion API error {response.status_code}: {error_msg}")
                 return None
                 
         except Exception as e:
             logger.error(f"Error with Stable Diffusion: {e}")
             return None
     
-    def _generate_with_replicate(self, prompt: str, width: int, height: int) -> Optional[str]:
+    def _generate_with_replicate(self, prompt: str, width: int, height: int, scene_index: int = 0) -> Optional[str]:
         """
         Generate image using Replicate API (high quality)
         """
@@ -204,13 +310,19 @@ class ImageGenerator:
             # Enhance prompt
             enhanced_prompt = self._enhance_prompt_for_image(prompt)
             
+            # Add unique seed for variety
+            import random
+            seed = random.randint(0, 2147483647) + scene_index * 1000
+            
             # Use FLUX model for best quality
+            logger.info(f"Replicate request - Prompt: {enhanced_prompt[:80]}..., Seed: {seed}")
             output = replicate.run(
                 "black-forest-labs/flux-schnell",
                 input={
                     "prompt": enhanced_prompt,
                     "width": min(width, 1024),
                     "height": min(height, 1024),
+                    "seed": seed  # Unique seed for variety
                 }
             )
             
@@ -243,7 +355,7 @@ class ImageGenerator:
             logger.error(f"Error with Replicate: {e}")
             return None
     
-    def _generate_with_gemini(self, prompt: str, width: int, height: int) -> Optional[str]:
+    def _generate_with_gemini(self, prompt: str, width: int, height: int, scene_index: int = 0) -> Optional[str]:
         """
         Generate image using Gemini (if image generation is available)
         """
@@ -260,7 +372,7 @@ class ImageGenerator:
             logger.error(f"Error with Gemini image generation: {e}")
             return None
     
-    def _generate_placeholder_image(self, prompt: str, width: int, height: int) -> str:
+    def _generate_placeholder_image(self, prompt: str, width: int, height: int, scene_index: int = 0) -> str:
         """
         Generate a beautiful placeholder image with gradient (no text)
         Focus on visual appeal - text will be in audio narration
@@ -278,6 +390,26 @@ class ImageGenerator:
         
         # Generate gradient colors based on prompt
         colors = self._get_colors_from_prompt(prompt)
+        
+        # Add variation based on scene index for variety
+        random.seed(scene_index * 1000)
+        color_variation = (
+            random.randint(-30, 30),
+            random.randint(-30, 30),
+            random.randint(-30, 30)
+        )
+        colors = (
+            (
+                max(0, min(255, colors[0][0] + color_variation[0])),
+                max(0, min(255, colors[0][1] + color_variation[1])),
+                max(0, min(255, colors[0][2] + color_variation[2]))
+            ),
+            (
+                max(0, min(255, colors[1][0] + color_variation[0])),
+                max(0, min(255, colors[1][1] + color_variation[1])),
+                max(0, min(255, colors[1][2] + color_variation[2]))
+            )
+        )
         
         # Draw smooth gradient (vertical)
         for i in range(height):

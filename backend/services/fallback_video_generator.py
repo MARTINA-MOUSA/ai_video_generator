@@ -34,9 +34,9 @@ class FallbackVideoGenerator:
         try:
             logger.info(f"Generating fallback video: {prompt[:50]}...")
             
-            # Generate image
+            # Generate image (with scene_index=0 for single scene)
             width, height = map(int, settings.VIDEO_RESOLUTION.split("x"))
-            image_path = self.image_generator.generate_image(prompt, width, height)
+            image_path = self.image_generator.generate_image(prompt, width, height, scene_index=0)
             
             # Generate audio narration
             audio_path = self.tts_service.generate_speech(prompt, language="en")

@@ -3,10 +3,27 @@ Configuration Settings
 """
 import os
 from typing import List
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+from loguru import logger
 
-load_dotenv()
+# Find and load .env file
+env_path = Path(".env")
+if not env_path.exists():
+    # Try parent directory (backend/.env)
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if not env_path.exists():
+        # Try root directory
+        env_path = Path(__file__).parent.parent.parent.parent / ".env"
+
+if env_path.exists():
+    load_dotenv(env_path)
+    logger.info(f"✅ Loaded .env file from: {env_path.absolute()}")
+else:
+    logger.warning(f"⚠️ .env file not found. Please create .env file with your API keys.")
+    logger.info(f"   Looked in: {Path.cwd()}, {Path(__file__).parent.parent.parent}")
+    load_dotenv()  # Try default location anyway
 
 
 class Settings(BaseSettings):

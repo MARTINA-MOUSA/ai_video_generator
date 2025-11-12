@@ -15,13 +15,27 @@ class PromptEnhancer:
     """Enhance text prompts for better video generation"""
     
     def __init__(self):
-        if GEMINI_AVAILABLE and settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
-            self.use_gemini = True
+        gemini_key = settings.GEMINI_API_KEY
+        if GEMINI_AVAILABLE and gemini_key and gemini_key != "your_gemini_api_key_here" and len(gemini_key) > 10:
+            try:
+                genai.configure(api_key=gemini_key)
+                self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
+                self.use_gemini = True
+                logger.info(f"✅ Gemini initialized successfully (API key length: {len(gemini_key)})")
+            except Exception as e:
+                self.use_gemini = False
+                logger.error(f"❌ Failed to initialize Gemini: {e}")
         else:
             self.use_gemini = False
-            logger.warning("Gemini not available, using basic prompt enhancement")
+            if not GEMINI_AVAILABLE:
+                logger.warning("⚠️ Gemini package not installed. Install with: pip install google-generativeai")
+            elif not gemini_key:
+                logger.warning("⚠️ GEMINI_API_KEY is empty. Add it to .env file")
+            elif gemini_key == "your_gemini_api_key_here":
+                logger.warning("⚠️ GEMINI_API_KEY is still placeholder. Replace with actual key in .env")
+            else:
+                logger.warning(f"⚠️ GEMINI_API_KEY seems invalid (too short: {len(gemini_key)} chars)")
+            logger.info("Using basic prompt enhancement (without Gemini)")
     
     def enhance(self, prompt: str) -> str:
         """
@@ -47,7 +61,12 @@ class PromptEnhancer:
                 enhanced = response.text.strip()
                 return enhanced if enhanced else prompt
             except Exception as e:
-                logger.error(f"Error enhancing prompt with Gemini: {e}")
+                error_str = str(e)
+                if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+                    logger.warning("⚠️ Gemini API quota exceeded. Using basic enhancement instead.")
+                    logger.info("💡 To fix: Wait a few minutes or upgrade your Gemini API plan")
+                else:
+                    logger.error(f"Error enhancing prompt with Gemini: {e}")
                 return self._basic_enhance(prompt)
         else:
             return self._basic_enhance(prompt)
