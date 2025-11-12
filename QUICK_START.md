@@ -90,5 +90,5 @@ Interface will be on: `http://localhost:8501`
 - Review logs in console
 
 ### AI Models Error
-- Verify API keys are correct
-- HuggingFace models need GPU in most cases
+- Verify Minimax API key is correct
+- Check Minimax dashboard for quota or region errors

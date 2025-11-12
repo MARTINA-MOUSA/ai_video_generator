@@ -20,11 +20,11 @@ class FallbackVideoGenerator:
     def __init__(self):
         self.tts_service = TTSService()
 
-    def generate(self, prompt: str, duration: int = 10) -> str:
+    def generate(self, prompt: str, duration: int = 10, resolution: str = "720P") -> str:
         try:
             logger.info(f"Generating fallback video: {prompt[:60]}...")
 
-            width, height = map(int, settings.VIDEO_RESOLUTION.split("x"))
+            width, height = self._resolution_to_size(resolution)
             frame_path = self._create_text_frame(prompt, width, height)
 
             audio_path = self.tts_service.generate_speech(prompt, language="en")
@@ -121,3 +121,12 @@ class FallbackVideoGenerator:
                 os.remove(path)
             except Exception:
                 pass
+
+    @staticmethod
+    def _resolution_to_size(resolution: str) -> Tuple[int, int]:
+        mapping = {
+            "1080P": (1920, 1080),
+            "720P": (1280, 720),
+            "480P": (854, 480),
+        }
+        return mapping.get(resolution.upper(), (1280, 720))

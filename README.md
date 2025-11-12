@@ -46,7 +46,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create .env and add your Minimax key
-copy .env.example .env  # or create manually
+touch .env  # on Windows use: New-Item .env
 ```
 
 ## API Key Setup

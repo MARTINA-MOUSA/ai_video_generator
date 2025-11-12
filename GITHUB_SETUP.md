@@ -63,8 +63,7 @@ echo ".env" >> .gitignore
 - ✅ All code files (`.py`)
 - ✅ `requirements.txt`
 - ✅ `README.md`
-- ✅ `env_template.txt` (without real API keys)
-- ✅ All documentation files (`.md`)
+- ✅ Documentation files (`.md`)
 
 ### ❌ Files NOT to Upload:
 - ❌ `.env` (contains API keys)
@@ -146,7 +145,7 @@ git push -u origin main
 
 ### 2. Add Topics
 - On Repository page, click **"Add topics"**
-- Add: `ai`, `video-generation`, `gemini`, `python`, `fastapi`, `streamlit`
+- Add: `ai`, `video-generation`, `minimax`, `python`, `fastapi`, `streamlit`
 
 ### 3. Add Badges (Optional)
 You can add badges in `README.md`:
@@ -186,7 +185,6 @@ If you pushed `.env` by mistake:
 ⚠️ **Very Important:**
 
 1. **Never push `.env`** - contains API keys
-2. Use `env_template.txt` as template only
 3. If you pushed API keys by mistake:
    - Delete repository immediately
    - Create new API keys

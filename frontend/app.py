@@ -238,8 +238,10 @@ def display_job_status(status: dict):
         st.write(f"النموذج: {status.get('model_used', 'N/A')}")
         st.write(f"المدة: {status.get('duration_seconds', 'N/A')} ثانية")
         st.write(f"الدقة: {status.get('resolution', 'N/A')}")
-        if status.get('image_mode'):
-            st.write(f"نمط الصور: {status.get('image_mode')}")
+        if status.get('model_used') == 'fallback':
+            st.write("نمط المحتوى: صوت ونص فقط (Fallback)")
+        else:
+            st.write("نمط المحتوى: فيديو كامل")
         st.write(f"تاريخ الإنشاء: {status.get('created_at', 'N/A')}")
     
     # Video display

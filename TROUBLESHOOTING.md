@@ -52,9 +52,7 @@
 ## Quick Setup Checklist
 
 - [ ] Install dependencies: `pip install -r requirements.txt`
-- [ ] Copy `env_template.txt` to `.env`
-- [ ] Add `GEMINI_API_KEY` to `.env` (required for video generation)
-- [ ] Add `HF_API_KEY` to `.env` (optional, for real images)
+- [ ] Create `.env` and add `MINIMAX_API_KEY`
 - [ ] Verify gTTS is installed: `pip install gtts`
 - [ ] Restart backend server after changes
 

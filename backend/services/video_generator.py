@@ -30,6 +30,19 @@ class VideoGeneratorService:
         video_duration = duration or settings.DEFAULT_VIDEO_DURATION
         video_duration = min(video_duration, settings.MAX_VIDEO_DURATION)
 
+        if image_mode == "text_only":
+            video_path = self.fallback_generator.generate(prompt, video_duration, resolution)
+            return {
+                "video_path": video_path,
+                "model_used": "fallback",
+                "duration": video_duration,
+                "prompt": prompt,
+                "enhanced_prompt": prompt,
+                "resolution": resolution,
+                "fps": settings.VIDEO_FPS,
+                "image_mode": "text_only",
+            }
+
         try:
             minimax_resolution = resolution or settings.MINIMAX_DEFAULT_RESOLUTION
             video_path = self.minimax_service.generate(
@@ -49,14 +62,14 @@ class VideoGeneratorService:
             }
         except Exception as e:
             logger.error(f"Minimax generation failed: {e}", exc_info=True)
-            video_path = self.fallback_generator.generate(prompt, video_duration)
+            video_path = self.fallback_generator.generate(prompt, video_duration, resolution)
             return {
                 "video_path": video_path,
                 "model_used": "fallback",
                 "duration": video_duration,
                 "prompt": prompt,
                 "enhanced_prompt": prompt,
-                "resolution": settings.VIDEO_RESOLUTION,
+                "resolution": resolution,
                 "fps": settings.VIDEO_FPS,
                 "image_mode": "text_only",
             }

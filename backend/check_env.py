@@ -22,9 +22,8 @@ if env_path.exists():
 else:
     print(f"\n❌ .env file not found!")
     print(f"   Looked in: {Path.cwd()}, {Path(__file__).parent.parent}")
-    print(f"\n   Please create .env file by copying env_template.txt:")
-    print(f"   cp env_template.txt .env")
-    print(f"   Then edit .env and add your API keys")
+    print("\n   Please create .env file and add:")
+    print("   MINIMAX_API_KEY=sk-xxxxxxxxxxxxxxxx")
     exit(1)
 
 print("\n" + "=" * 60)
