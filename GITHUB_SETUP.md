@@ -127,7 +127,7 @@ git init
 git add .
 
 # 3. Commit
-git commit -m "Initial commit: AI Video Generator with Gemini support"
+git commit -m "Initial commit: AI Video Generator with Minimax support"
 
 # 4. Connect to GitHub (replace with your values)
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git

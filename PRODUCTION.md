@@ -10,15 +10,8 @@
 
 ### 1. Environment Setup
 
-```bash
-# Copy environment template
-cp env_template.txt .env
+Create `.env` with production values:
 
-# Edit .env with production values
-nano .env
-```
-
-**Important production settings:**
 ```env
 # Database
 POSTGRES_DB=ai_video_generator
@@ -31,9 +24,10 @@ LOG_LEVEL=INFO
 HOST=0.0.0.0
 PORT=8000
 
-# API Keys
-GEMINI_API_KEY=your_production_key
-GEMINI_MODEL=gemini-2.0-flash-exp
+# Minimax API
+MINIMAX_API_KEY=sk-xxxxxxxxxxxxxxxx
+MINIMAX_MODEL=MiniMax-Hailuo-2.3
+MINIMAX_BASE_URL=https://api.minimax.io/v1
 
 # Security
 MAX_REQUESTS_PER_MINUTE=10
@@ -97,13 +91,11 @@ volumes:
 ### Environment Variables
 
 **Required:**
-- `GEMINI_API_KEY` - Gemini API key
+- `MINIMAX_API_KEY` - Minimax API key
 - `POSTGRES_PASSWORD` - Database password
 - `DATABASE_URL` - PostgreSQL connection string
 
 **Optional:**
-- `HF_API_KEY` - HuggingFace API key
-- `REPLICATE_API_TOKEN` - Replicate API token
 - `CELERY_BROKER_URL` - Redis connection
 - `CELERY_RESULT_BACKEND` - Redis connection
 

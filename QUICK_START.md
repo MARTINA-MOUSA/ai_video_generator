@@ -4,7 +4,7 @@
 
 - Python 3.9+
 - FFmpeg (for video playback)
-- GPU (optional but recommended for AI models)
+- GPU (اختياري؛ Minimax يعمل في السحابة)
 
 ## Installation
 
@@ -28,18 +28,13 @@ pip install -r requirements.txt
 
 ### 3. Setup Environment Variables
 
-```bash
-# Copy template file
-cp env_template.txt .env
+أنشئ ملف `.env` وتأكد من إضافة مفاتيح Minimax:
 
-# Open .env file and add your API keys
-# At minimum, add GEMINI_API_KEY
-```
-
-**Example `.env` file:**
 ```env
-GEMINI_API_KEY=your_actual_api_key_here
-GEMINI_MODEL=gemini-2.0-flash-exp
+MINIMAX_API_KEY=sk-xxxxxxxxxxxxxxxx
+MINIMAX_MODEL=MiniMax-Hailuo-2.3
+MINIMAX_BASE_URL=https://api.minimax.io/v1
+MINIMAX_DEFAULT_RESOLUTION=720P
 ```
 
 ### 4. Create Required Directories
@@ -79,8 +74,8 @@ Interface will be on: `http://localhost:8501`
 
 ## Notes
 
-- Without API keys, the system will use Fallback generator (simple video with text)
-- For best results, add at least GEMINI_API_KEY
+- Without `MINIMAX_API_KEY`, the system will generate a simple text-only fallback video
+- Ensure FFmpeg is installed for video encoding
 - FFmpeg is required for video playback
 
 ## Troubleshooting
@@ -97,4 +92,3 @@ Interface will be on: `http://localhost:8501`
 ### AI Models Error
 - Verify API keys are correct
 - HuggingFace models need GPU in most cases
-- Replicate works without GPU (cloud-based)

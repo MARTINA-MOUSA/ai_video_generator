@@ -54,7 +54,7 @@ def check_api_health():
         return False
 
 
-def generate_video(prompt: str, duration: int = None, model: str = None):
+def generate_video(prompt: str, duration: int = None, model: str = None, image_mode: str = "auto", resolution: str = "720P"):
     """Generate video via API"""
     try:
         payload = {"prompt": prompt}
@@ -62,6 +62,10 @@ def generate_video(prompt: str, duration: int = None, model: str = None):
             payload["duration"] = duration
         if model:
             payload["model"] = model
+        if image_mode:
+            payload["image_mode"] = image_mode
+        if resolution:
+            payload["resolution"] = resolution
         
         response = requests.post(
             f"{API_BASE_URL}/api/video/generate",
@@ -127,21 +131,26 @@ def main():
                 help="الحد الأقصى: 120 ثانية (دقيقتان)"
             )
             
-            model_choice = st.selectbox(
-                "النموذج (اختياري)",
-                ["تلقائي", "Gemini", "HuggingFace", "Replicate", "Fallback"],
-                help="اختر النموذج المستخدم (أو اتركه تلقائي)"
+            resolution_choice = st.selectbox(
+                "الدقة",
+                ["720P", "1080P"],
+                index=0,
+                help="اختر دقة الفيديو الناتج"
             )
             
-            # Map Arabic choice to API value
-            model_map = {
-                "تلقائي": None,
-                "Gemini": "gemini",
-                "HuggingFace": "huggingface",
-                "Replicate": "replicate",
-                "Fallback": "fallback"
+            image_mode_choice = st.selectbox(
+                "محتوى الفيديو",
+                ["صور + صوت", "صوت و نص فقط"],
+                help="اختر إذا كنت تريد فيديو بصور أو بصوت ونص فقط"
+            )
+            
+            image_mode_map = {
+                "صور + صوت": "auto",
+                "صوت و نص فقط": "text_only",
             }
-            model = model_map.get(model_choice)
+            image_mode = image_mode_map.get(image_mode_choice, "auto")
+            resolution = resolution_choice
+            model = None
         
         if st.button("🚀 إنشاء الفيديو", type="primary", use_container_width=True):
             if not prompt:
@@ -151,7 +160,9 @@ def main():
                     result = generate_video(
                         prompt,
                         duration if duration > 5 else None,
-                        model
+                        model,
+                        image_mode,
+                        resolution,
                     )
                     
                     if result:
@@ -226,6 +237,9 @@ def display_job_status(status: dict):
         st.write("**التفاصيل:**")
         st.write(f"النموذج: {status.get('model_used', 'N/A')}")
         st.write(f"المدة: {status.get('duration_seconds', 'N/A')} ثانية")
+        st.write(f"الدقة: {status.get('resolution', 'N/A')}")
+        if status.get('image_mode'):
+            st.write(f"نمط الصور: {status.get('image_mode')}")
         st.write(f"تاريخ الإنشاء: {status.get('created_at', 'N/A')}")
     
     # Video display

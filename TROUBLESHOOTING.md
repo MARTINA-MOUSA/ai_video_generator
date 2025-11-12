@@ -2,22 +2,14 @@
 
 ## Problem: Video has no images or audio
 
-### Issue 1: No Real Images Generated
+### Issue 1: Minimax request returns 401/403/404
 
-**Symptoms:** Video shows only gradient backgrounds, no real images.
+**Symptoms:** Logs show HTTP errors such as 401, 403, or 404 from `https://api.minimax.io`.
 
 **Solution:**
-1. Get a free HuggingFace API key:
-   - Go to https://huggingface.co/settings/tokens
-   - Create a new token
-   - Copy it to your `.env` file:
-   ```
-   HF_API_KEY=your_actual_huggingface_token_here
-   ```
-
-2. Restart the backend server after adding the key.
-
-**Alternative:** Without HF_API_KEY, the system will use beautiful gradient images based on your prompt keywords.
+1. تأكد أن مفتاح `MINIMAX_API_KEY` موجود في `.env`.
+2. استخدم عنوان الـ API الصحيح حسب منطقتك (عادة: `https://api.minimax.io/v1`).
+3. إذا كان الخطأ 404 فتأكد من أن endpoint `/video_generation` متاح في منطقتك.
 
 ### Issue 2: No Audio in Video
 
@@ -43,21 +35,7 @@
    pip install pyttsx3
    ```
 
-### Issue 3: Images are Placeholder Only
-
-**Symptoms:** Images are gradients, not real photos.
-
-**Causes:**
-- No HF_API_KEY configured
-- HF_API_KEY is invalid
-- Stable Diffusion API is down or rate-limited
-
-**Solution:**
-1. Check your `.env` file has a valid HF_API_KEY
-2. Test the API key manually
-3. Check backend logs for API errors
-
-### Issue 4: Audio Generation Fails
+### Issue 3: Audio Generation Fails
 
 **Symptoms:** Video has no sound, logs show TTS errors.
 
@@ -82,14 +60,6 @@
 
 ## Testing
 
-### Test Image Generation
-```python
-from services.image_generator import ImageGenerator
-gen = ImageGenerator()
-image = gen.generate_image("A beautiful sunset over the ocean", 1280, 720)
-print(f"Image saved to: {image}")
-```
-
 ### Test TTS
 ```python
 from services.tts_service import TTSService
@@ -101,14 +71,13 @@ print(f"Audio saved to: {audio}")
 ## Logs
 
 Check backend logs for detailed information:
-- Image generation: Look for "Image generated:" or "Using placeholder"
+- Minimax API: Look for `Calling Minimax API` or `Minimax generation failed`
 - Audio generation: Look for "Audio generated:" or "Error generating speech"
-- Video creation: Look for "Video generated successfully"
+- Video creation: Look for "Video downloaded to" or fallback messages
 
 ## Common Error Messages
 
 - `No TTS library available`: Install gTTS with `pip install gtts`
-- `Stable Diffusion API error`: Check HF_API_KEY or use placeholder images
-- `Error adding audio`: Check audio file exists and is valid format
-- `No valid scenes to create video`: Check image generation is working
+- `Minimax did not return a video URL`: تأكد أن المهمة اكتملت وراجع المفتاح والكوته
+- `Video downloaded to ...`: نجاح العملية
 

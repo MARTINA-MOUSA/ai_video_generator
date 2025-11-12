@@ -4,6 +4,7 @@ Configuration Settings
 import os
 from typing import List
 from pathlib import Path
+
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 from loguru import logger
@@ -11,19 +12,17 @@ from loguru import logger
 # Find and load .env file
 env_path = Path(".env")
 if not env_path.exists():
-    # Try parent directory (backend/.env)
     env_path = Path(__file__).parent.parent.parent / ".env"
     if not env_path.exists():
-        # Try root directory
         env_path = Path(__file__).parent.parent.parent.parent / ".env"
 
 if env_path.exists():
     load_dotenv(env_path)
     logger.info(f"✅ Loaded .env file from: {env_path.absolute()}")
 else:
-    logger.warning(f"⚠️ .env file not found. Please create .env file with your API keys.")
+    logger.warning("⚠️ .env file not found. Please create .env file with your API keys.")
     logger.info(f"   Looked in: {Path.cwd()}, {Path(__file__).parent.parent.parent}")
-    load_dotenv()  # Try default location anyway
+    load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -74,20 +73,13 @@ class Settings(BaseSettings):
     TEMP_DIR: str = os.getenv("TEMP_DIR", "./temp")
     
     # AI Model Settings
-    # HuggingFace
-    HF_API_KEY: str = os.getenv("HF_API_KEY", "")
-    HF_MODEL_NAME: str = os.getenv(
-        "HF_MODEL_NAME",
-        "stabilityai/stable-video-diffusion-img2vid-xt"
-    )
-    
-    # Replicate (Alternative)
-    REPLICATE_API_TOKEN: str = os.getenv("REPLICATE_API_TOKEN", "")
-    
-    # Gemini (for prompt enhancement and video generation)
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
-    GEMINI_USE_FOR_VIDEO: bool = os.getenv("GEMINI_USE_FOR_VIDEO", "True").lower() == "true"
+    # Minimax
+    MINIMAX_API_KEY: str = os.getenv("MINIMAX_API_KEY", "")
+    MINIMAX_BASE_URL: str = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
+    MINIMAX_MODEL: str = os.getenv("MINIMAX_MODEL", "MiniMax-Hailuo-2.3")
+    MINIMAX_DEFAULT_RESOLUTION: str = os.getenv("MINIMAX_DEFAULT_RESOLUTION", "720P")
+    MINIMAX_POLL_INTERVAL: float = float(os.getenv("MINIMAX_POLL_INTERVAL", "3"))
+    MINIMAX_MAX_WAIT: int = int(os.getenv("MINIMAX_MAX_WAIT", "180"))
     
     # Job Queue (Celery)
     CELERY_BROKER_URL: str = os.getenv(
@@ -111,23 +103,18 @@ class Settings(BaseSettings):
         case_sensitive = True
         
     def validate_api_keys(self):
-        """Validate that at least one API key is set"""
-        has_gemini = bool(self.GEMINI_API_KEY and self.GEMINI_API_KEY != "your_gemini_api_key_here")
-        has_hf = bool(self.HF_API_KEY and self.HF_API_KEY != "your_huggingface_api_key_here")
-        has_replicate = bool(self.REPLICATE_API_TOKEN and self.REPLICATE_API_TOKEN != "your_replicate_api_token_here")
-        
-        if not (has_gemini or has_hf or has_replicate):
+        """Validate that the Minimax key is set"""
+        has_minimax = bool(self.MINIMAX_API_KEY and self.MINIMAX_API_KEY != "your_minimax_api_key_here")
+
+        if not has_minimax:
             import warnings
             warnings.warn(
-                "⚠️  No API keys set. System will use Fallback generator only.\n"
-                "💡 Add at least GEMINI_API_KEY for best results.",
+                "⚠️  MINIMAX_API_KEY not set. System will use fallback generator only.",
                 UserWarning
             )
         
         return {
-            "gemini": has_gemini,
-            "huggingface": has_hf,
-            "replicate": has_replicate,
+            "minimax": has_minimax,
             "fallback": True  # Always available
         }
 

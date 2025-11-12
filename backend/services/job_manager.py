@@ -24,7 +24,9 @@ class JobManager:
         job_id: str,
         prompt: str,
         duration: int = None,
-        model: str = None
+        model: str = None,
+        image_mode: str = "auto",
+        resolution: str = "720P",
     ):
         """
         Process video generation job
@@ -58,7 +60,9 @@ class JobManager:
             result = self.video_generator.generate_video(
                 prompt=prompt,
                 duration=duration,
-                model=model
+                model=model,
+                image_mode=image_mode,
+                resolution=resolution,
             )
             
             job.progress = 70

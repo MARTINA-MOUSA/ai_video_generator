@@ -29,6 +29,7 @@ async def get_job_status(
         if video_file:
             response["video_url"] = f"/api/video/download/{video_file.id}"
             response["video_filename"] = video_file.filename
+            response["resolution"] = video_file.resolution
     
     return response
 

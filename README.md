@@ -4,8 +4,8 @@ Advanced tool for generating videos from text prompts using AI
 
 ## Features
 
-- 🎬 Generate videos from text prompts (up to 2 minutes)
-- 🤖 Support for multiple AI models (Gemini, HuggingFace, Replicate)
+- 🎬 Generate narrated videos from text prompts (up to 2 minutes)
+- 🤖 Powered by Minimax text-to-video API
 - ⚡ Asynchronous processing with Job Queue
 - 🌐 Modern web interface (Streamlit)
 - 📊 Real-time status and progress tracking
@@ -30,7 +30,7 @@ ai_video_generator/
 ## Technologies
 
 - **Backend**: FastAPI, SQLAlchemy, Celery (Job Queue)
-- **AI Models**: Gemini, HuggingFace, Replicate
+- **AI Model**: Minimax-Hailuo-2.3 (text-to-video)
 - **Video Processing**: MoviePy, FFmpeg
 - **Frontend**: Streamlit
 - **Database**: SQLite (Development) / PostgreSQL (Production)
@@ -45,31 +45,21 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # Install requirements
 pip install -r requirements.txt
 
-# Setup Environment Variables
-# Copy template file and create .env
-cp env_template.txt .env
-
-# Open .env file and add your API keys
-# At minimum, add GEMINI_API_KEY
+# Create .env and add your Minimax key
+copy .env.example .env  # or create manually
 ```
 
-## API Keys Setup
+## API Key Setup
 
-1. **Copy template file:**
-   ```bash
-   cp env_template.txt .env
-   ```
-
-2. **Open `.env` file and add API keys:**
-   - **Gemini API** (Recommended): Get API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - **HuggingFace API** (Optional): Get token from [HuggingFace](https://huggingface.co/settings/tokens)
-   - **Replicate API** (Optional): Get token from [Replicate](https://replicate.com/account/api-tokens)
-
-3. **Example `.env` file:**
+1. إنشاء ملف `.env` في جذر المشروع.
+2. أضف مفتاح Minimax الخاص بك:
    ```env
-   GEMINI_API_KEY=AIzaSy...your_key_here
-   GEMINI_MODEL=gemini-2.0-flash-exp
+   MINIMAX_API_KEY=sk-xxxxxxxxxxxxxxxx
+   MINIMAX_MODEL=MiniMax-Hailuo-2.3
+   MINIMAX_BASE_URL=https://api.minimax.io/v1
+   MINIMAX_DEFAULT_RESOLUTION=720P
    ```
+3. يمكنك إنشاء المفتاح من [Alibaba Cloud Model Studio](https://modelstudio.console.alibabacloud.com/?tab=dashboard#/api-key).
 
 📖 **For more details:** See [QUICK_START.md](QUICK_START.md)
 
@@ -89,7 +79,7 @@ streamlit run app.py
 
 - Python 3.9+
 - FFmpeg
-- GPU (optional but recommended)
+- GPU (اختياري – لا يشترط لأن Minimax يعمل في السحابة)
 
 ## Production Deployment
 

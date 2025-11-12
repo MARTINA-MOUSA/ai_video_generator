@@ -33,20 +33,10 @@ print("=" * 60)
 
 # Check each API key
 api_keys = {
-    "GEMINI_API_KEY": {
+    "MINIMAX_API_KEY": {
         "required": True,
-        "description": "Required for video generation",
-        "get_url": "https://aistudio.google.com/app/apikey"
-    },
-    "HF_API_KEY": {
-        "required": False,
-        "description": "For real image generation (Stable Diffusion)",
-        "get_url": "https://huggingface.co/settings/tokens"
-    },
-    "REPLICATE_API_TOKEN": {
-        "required": False,
-        "description": "For high-quality image generation (FLUX)",
-        "get_url": "https://replicate.com/account/api-tokens"
+        "description": "Required for Minimax text-to-video",
+        "get_url": "https://modelstudio.console.alibabacloud.com/?tab=dashboard#/api-key"
     }
 }
 

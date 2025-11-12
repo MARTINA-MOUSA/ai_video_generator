@@ -4,7 +4,7 @@ Video Generation API Routes
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 from sqlalchemy.orm import Session
 import uuid
 import os
@@ -23,6 +23,8 @@ class VideoGenerationRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=1000, description="Text prompt for video generation")
     duration: Optional[int] = Field(None, ge=1, le=120, description="Video duration in seconds (max 120)")
     model: Optional[str] = Field(None, description="AI model to use (optional)")
+    image_mode: Literal["auto", "text_only"] = "auto"
+    resolution: str = Field("720P", description="Video resolution (e.g., 720P, 1080P)")
 
 
 class VideoGenerationResponse(BaseModel):
@@ -61,7 +63,9 @@ async def generate_video(
             job_id=job_id,
             prompt=request.prompt,
             duration=request.duration,
-            model=request.model
+            model=request.model,
+            image_mode=request.image_mode,
+            resolution=request.resolution,
         )
         
         return VideoGenerationResponse(
@@ -111,6 +115,7 @@ async def list_videos(
             if video_file:
                 video_data["video_url"] = f"/api/video/download/{video_file.id}"
                 video_data["video_filename"] = video_file.filename
+                video_data["resolution"] = video_file.resolution
         videos.append(video_data)
     
     return {
